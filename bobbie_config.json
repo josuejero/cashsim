@@ -1,0 +1,87 @@
+{
+  "current_cash": 99.29,
+  "safety_cushion": 10,
+  "weekday_earnings": 26.79,
+  "gas_pct": 0.185,
+  "gas_fill_size": 25.0,
+
+  "bills": [
+    {
+      "name": "Patreon",
+      "usual_day": 1,
+      "amount": 2.00
+    },
+    {
+      "name": "Patreon (micro tier)",
+      "usual_day": 15,
+      "amount": 1.00
+    },
+    {
+      "name": "Headspace",
+      "usual_day": 29,
+      "amount": 9.99
+    },
+    {
+      "name": "DSA (donation)",
+      "usual_day": 12,
+      "amount": 2.00
+    }
+  ],
+
+  "credit_cards": [
+    {
+      "name": "Apple Card (Goldman Sachs)",
+      "apr": 0.2624,
+      "balance": 1377.73,
+      "due_day": 30,
+      "min_pct": 0.01,
+      "min_floor": 25.0,
+      "statement_day": 31
+    },
+    {
+      "name": "Bank of America Visa",
+      "apr": 0.2024,
+      "balance": 3956.62,
+      "due_day": 7,
+      "min_pct": 0.01,
+      "min_floor": 35.0,
+      "statement_day": 10
+    },
+    {
+      "name": "Capital One Quicksilver (1845)",
+      "apr": 0.2974,
+      "balance": 112.33,
+      "due_day": 6,
+      "min_pct": 0.01,
+      "min_floor": 25.0,
+      "statement_day": 11
+    }
+  ],
+
+  "student_loans": [
+    {
+      "name": "Direct Subsidized (2025–26)",
+      "apr": 0.0639,
+      "balance": 4500.00,
+      "due_day": null,
+      "min_pct": null,
+      "min_floor": null,
+      "statement_day": null,
+      "notes": "In-school and 6-month grace interest paid by DoE. Disbursements: $2,250 Fall 2025, $2,250 Spring 2026."
+    },
+    {
+      "name": "Direct Unsubsidized (2025–26)",
+      "apr": 0.0639,
+      "balance": 1135.00,
+      "due_day": null,
+      "min_pct": null,
+      "min_floor": null,
+      "statement_day": null,
+      "notes": "Interest accrues while in school. Disbursements: $568 Fall 2025, $567 Spring 2026."
+    }
+  ],
+
+
+  "interest_mode": "statement_adb",
+  "extra_strategy": "avalanche"
+}

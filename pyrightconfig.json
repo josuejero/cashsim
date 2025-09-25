@@ -1,0 +1,13 @@
+{
+  "typeCheckingMode": "basic",
+  "venv": ".venv",
+  "exclude": ["**/.venv/**", "**/.git/**", "**/__pycache__/**"],
+  "reportUnknownParameterType": "error",
+  "reportUnknownArgumentType": "error",
+  "reportUnknownMemberType": "error",
+  "reportUnknownVariableType": "error",
+  "reportUnknownLambdaType": "error",
+  "executionEnvironments": [
+    { "root": "src" }
+  ]
+}

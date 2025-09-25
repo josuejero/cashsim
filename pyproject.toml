@@ -1,0 +1,64 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cashsim"
+version = "0.1.0"
+description = "Cash flow simulator with Streamlit UI"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "You" }]
+dependencies = [
+  # Core
+  "pydantic>=2.10,<3",
+  "pandas>=2.2.3,<3.0",          # 2.2.3+ has 3.13 wheels
+  "python-dateutil>=2.9.0.post0", # relativedelta
+  # UI
+  "streamlit>=1.49,<2.0",
+  # Streamlit dataframes use Arrow underneath; keep it modern for 3.13 wheels
+  "pyarrow>=21,<22",
+  # NEW: Google Sheets integration
+  "gspread>=6,<7",
+  "google-auth>=2.0",
+  "gspread-dataframe>=2.0.0"
+]
+
+[project.optional-dependencies]
+dev = [
+  "ruff>=0.5.0",
+  "pytest>=8.2",
+  "mypy>=1.10",
+  "types-python-dateutil>=2.9.0.20250822"
+]
+
+[project.scripts]
+cashsim = "cashsim.__main__:main"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+  "E", "F",   # pyflakes/pycodestyle
+  "I",        # import sorting
+  "UP",       # pyupgrade
+  "B",        # bugbear
+  "SIM"       # flake8-simplify
+]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pyright]
+# Use the src layout
+venvPath = "."
+venv = ".venv"
+reportMissingTypeStubs = "warning"
+typeCheckingMode = "basic"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cashsim"]
+sources = ["src"]

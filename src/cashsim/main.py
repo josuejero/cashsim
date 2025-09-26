@@ -1,15 +1,21 @@
-from __future__ import annotations
+# src/cashsim/__main__.py
+"""
+Executable entry-point for the 'cashsim' CLI.
 
-import subprocess
-import sys
-import importlib.resources as ir
+This makes the pyproject script mapping
+    cashsim = "cashsim.__main__:main"
+work correctly, and also supports:
+    python -m cashsim
+"""
+
+from .main import main as _main
 
 
 def main() -> None:
-    # Run the bundled Streamlit app no matter where the package is installed.
-    with ir.as_file(ir.files("cashsim.ui") / "streamlit_app.py") as app:
-        sys.exit(subprocess.call([sys.executable, "-m", "streamlit", "run", str(app)]))
+    """Delegate to the real CLI implementation in cashsim.main:main()."""
+    _main()
 
 
 if __name__ == "__main__":
+    # Supports: python -m cashsim
     main()

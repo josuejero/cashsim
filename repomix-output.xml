@@ -1,319 +1,145 @@
-===== bobbie_config.json =====
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+examples/
+  configs/
+    sample.json
+src/
+  cashsim/
+    analytics/
+      break_even.py
+      snapshot.py
+    io/
+      __init__.py
+      config_io.py
+      gsheets.py
+    planning/
+      planner.py
+    sim/
+      core.py
+      events.py
+      gas.py
+      interest.py
+      reserve.py
+      roll.py
+      types_runtime.py
+      types.py
+    ui/
+      components.py
+      formatters.py
+      state.py
+      streamlit_app.py
+    utils/
+      date_utils.py
+      money.py
+    __init__.py
+    constants.py
+    main.py
+    models.py
+.repomixignore
+bobbie_config.json
+config.json
+pyproject.toml
+pyrightconfig.json
+README.md
+repomix.config.json
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path=".repomixignore">
+# Add patterns to ignore here, one per line
+# Example:
+# *.log
+# tmp/
+.streamlit/secrets.toml
+</file>
+
+<file path="repomix.config.json">
 {
-  "current_cash": 99.29,
-  "safety_cushion": 10,
-  "weekday_earnings": 26.79,
-  "gas_pct": 0.185,
-  "gas_fill_size": 25.0,
-
-  "bills": [
-    {
-      "name": "Patreon",
-      "usual_day": 1,
-      "amount": 2.00
-    },
-    {
-      "name": "Patreon (micro tier)",
-      "usual_day": 15,
-      "amount": 1.00
-    },
-    {
-      "name": "Headspace",
-      "usual_day": 29,
-      "amount": 9.99
-    },
-    {
-      "name": "DSA (donation)",
-      "usual_day": 12,
-      "amount": 2.00
-    }
-  ],
-
-  "credit_cards": [
-    {
-      "name": "Apple Card (Goldman Sachs)",
-      "apr": 0.2624,
-      "balance": 1377.73,
-      "due_day": 30,
-      "min_pct": 0.01,
-      "min_floor": 25.0,
-      "statement_day": 31
-    },
-    {
-      "name": "Bank of America Visa",
-      "apr": 0.2024,
-      "balance": 3956.62,
-      "due_day": 7,
-      "min_pct": 0.01,
-      "min_floor": 35.0,
-      "statement_day": 10
-    },
-    {
-      "name": "Capital One Quicksilver (1845)",
-      "apr": 0.2974,
-      "balance": 112.33,
-      "due_day": 6,
-      "min_pct": 0.01,
-      "min_floor": 25.0,
-      "statement_day": 11
-    }
-  ],
-
-  "student_loans": [
-    {
-      "name": "Direct Subsidized (2025–26)",
-      "apr": 0.0639,
-      "balance": 4500.00,
-      "due_day": null,
-      "min_pct": null,
-      "min_floor": null,
-      "statement_day": null,
-      "notes": "In-school and 6-month grace interest paid by DoE. Disbursements: $2,250 Fall 2025, $2,250 Spring 2026."
-    },
-    {
-      "name": "Direct Unsubsidized (2025–26)",
-      "apr": 0.0639,
-      "balance": 1135.00,
-      "due_day": null,
-      "min_pct": null,
-      "min_floor": null,
-      "statement_day": null,
-      "notes": "Interest accrues while in school. Disbursements: $568 Fall 2025, $567 Spring 2026."
-    }
-  ],
-
-
-  "interest_mode": "statement_adb",
-  "extra_strategy": "avalanche"
-}
-
-
-===== config.json =====
-{
-  "current_cash": 178.0,
-  "safety_cushion": 100.0,
-  "weekday_earnings": 100.0,
-  "gas_pct": 0.185,
-  "gas_fill_size": 25.0,
-  "bills": [
-    {
-      "name": "Apple Music",
-      "usual_day": 28,
-      "amount": 10.99
-    },
-    {
-      "name": "Bank of America Maintenance",
-      "usual_day": 5,
-      "amount": 12.0
-    },
-    {
-      "name": "Criterion",
-      "usual_day": 11,
-      "amount": 11.0
-    },
-    {
-      "name": "DSA",
-      "usual_day": 12,
-      "amount": 11
-    },
-    {
-      "name": "Statefarm - Kate's Half",
-      "usual_day": 13,
-      "amount": 145.0
-    },
-    {
-      "name": "ChatGPT",
-      "usual_day": 15,
-      "amount": 20.0
-    },
-    {
-      "name": "Reform & Revolution",
-      "usual_day": 17,
-      "amount": 10.0
-    },
-    {
-      "name": "YouTube",
-      "usual_day": 20,
-      "amount": 9.06
-    },
-    {
-      "name": "Claude AI",
-      "usual_day": 25,
-      "amount": 20.0
-    },
-    {
-      "name": "iCloud",
-      "usual_day": 29,
-      "amount": 2.99
-    },
-    {
-      "name": "Eversource Electric - Bobbie's Half",
-      "usual_day": 24,
-      "amount": 105.0
-    },
-    {
-      "name": "National Grid Gas - Bobbie's Half",
-      "usual_day": 25,
-      "amount": 68.0
-    },{
-      "name": "OneDrive",
-      "usual_day": 13,
-      "amount": 1.99
-    },{
-      "name": "Verizon Fios - Bobbie's Half",
-      "usual_day": 28,
-      "amount": 45
-    }
-  ],
-  "credit_cards": [
-    {
-      "name": "Chase VISA",
-      "apr": 0.2499,
-      "balance": 9141.96,
-      "due_day": 24,
-      "min_pct": 0.0335,
-      "min_floor": 40.0,
-      "statement_day": null
-    },
-    {
-      "name": "Bank of America",
-      "apr": 0.2124,
-      "balance": 3070.63,
-      "due_day": 5,
-      "min_pct": 0.0274,
-      "min_floor": 35.0,
-      "statement_day": null
-    },
-    {
-      "name": "Samsung",
-      "apr": 0.0,
-      "balance": 1200.0,
-      "due_day": 3,
-      "min_pct": 0.0,
-      "min_floor": 40.12,
-      "statement_day": null
-    },
-    {
-      "name": "Aidvantage",
-      "apr": 0.0,
-      "balance": 3821.26,
-      "due_day": 11,
-      "min_pct": 0.0,
-      "min_floor": 0.0,
-      "statement_day": null
-    },
-    {
-      "name": "DentalFirst",
-      "apr": 0.3299,
-      "balance": 2236.0,
-      "due_day": 10,
-      "min_pct": 0.0362,
-      "min_floor": 30.0,
-      "statement_day": null
-    },
-    {
-      "name": "CreditOne",
-      "apr": 0.2949,
-      "balance": 976.13,
-      "due_day": 13,
-      "min_pct": 0.05,
-      "min_floor": 30.0,
-      "statement_day": null
-    }
-  ],
-  "ious": [
-    {
-      "name": "Mama",
-      "balance": 1050.0,
-      "apr": 0.0,
-      "due_day": null,
-      "min_pct": 0.0,
-      "min_floor": 0.0
-    },
-    {
-      "name": "Papa",
-      "balance": 300.0,
-      "apr": 0.0,
-      "due_day": null,
-      "min_pct": 0.0,
-      "min_floor": 0.0
-    },
-    {
-      "name": "Bobbie (NJ hotel)",
-      "balance": 300.0,
-      "apr": 0.0,
-      "due_day": null,
-      "min_pct": 0.0,
-      "min_floor": 0.0
-    },{
-      "name": "Kate",
-      "balance": 30000,
-      "apr": 0.0,
-      "due_day": null,
-      "min_pct": 0.0,
-      "min_floor": 0.0
-    }
-  ],
-  "oneoffs": [
-    {
-      "name": "Auto Repair Service",
-      "due_date": "2025-09-30",
-      "amount": 521.0,
-      "priority": 2,
-      "must_pay": true
-    },
-    {
-      "name": "MA Annual Inspection Sticker",
-      "due_date": "2025-11-05",
-      "amount": 35.0,
-      "priority": 1,
-      "must_pay": true
-    },
-    {
-      "name": "Car Registration",
-      "due_date": "2025-10-29",
-      "amount": 135.0,
-      "priority": 1,
-      "must_pay": true
-    },
-    {
-      "name": "MA License",
-      "due_date": "2025-10-29",
-      "amount": 115.0,
-      "priority": 1,
-      "must_pay": true
-    },{
-      "name": "Car Key Copy for Bobbie",
-      "due_date": "2025-11-29",
-      "amount": 130.0,
-      "priority": 3,
-      "must_pay": false
-    },{
-      "name": "Auto Insurance Down Payment",
-      "due_date": "2025-10-23",
-      "amount": 500.0,
-      "priority": 1,
-      "must_pay": true
-    }
-  ],
-  "invest": {
-    "enable": true,
-    "hysa_apy": 0.045,
-    "expected_market_return": 0.07,
-    "use_dca": true,
-    "roth_target": 778000,
-    "trad_target": 1500000,
-    "hysa_target": 0.0,
-    "robinhood_target": 0.0,
-    "ira_year_limit": 7000.0,
-    "roth_ok_today": true
+  "$schema": "https://repomix.com/schemas/latest/schema.json",
+  "input": {
+    "maxFileSize": 52428800
   },
-  "interest_mode": "statement_adb",
-  "extra_strategy": "avalanche"
+  "output": {
+    "filePath": "repomix-output.xml",
+    "style": "xml",
+    "parsableStyle": false,
+    "fileSummary": true,
+    "directoryStructure": true,
+    "files": true,
+    "removeComments": false,
+    "removeEmptyLines": false,
+    "compress": false,
+    "topFilesLength": 5,
+    "showLineNumbers": false,
+    "truncateBase64": false,
+    "copyToClipboard": false,
+    "tokenCountTree": false,
+    "git": {
+      "sortByChanges": true,
+      "sortByChangesMaxCommits": 100,
+      "includeDiffs": false,
+      "includeLogs": false,
+      "includeLogsCount": 50
+    }
+  },
+  "include": [],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": []
+  },
+  "security": {
+    "enableSecurityCheck": true
+  },
+  "tokenCount": {
+    "encoding": "o200k_base"
+  }
 }
+</file>
 
-
-===== examples/configs/sample.json =====
+<file path="examples/configs/sample.json">
 {
   "current_cash": 31.0,
   "safety_cushion": 100.0,
@@ -519,98 +345,9 @@
   "interest_mode": "statement_adb",
   "extra_strategy": "avalanche"
 }
+</file>
 
-
-===== pyproject.toml =====
-[build-system]
-requires = ["hatchling>=1.25"]
-build-backend = "hatchling.build"
-
-[project]
-name = "cashsim"
-version = "0.1.0"
-description = "Cash flow simulator with Streamlit UI"
-readme = "README.md"
-requires-python = ">=3.12"
-license = { text = "MIT" }
-authors = [{ name = "You" }]
-dependencies = [
-  # Core
-  "pydantic>=2.10,<3",
-  "pandas>=2.2.3,<3.0",          # 2.2.3+ has 3.13 wheels
-  "python-dateutil>=2.9.0.post0", # relativedelta
-  # UI
-  "streamlit>=1.49,<2.0",
-  # Streamlit dataframes use Arrow underneath; keep it modern for 3.13 wheels
-  "pyarrow>=21,<22",
-  # NEW: Google Sheets integration
-  "gspread>=6,<7",
-  "google-auth>=2.0",
-  "gspread-dataframe>=2.0.0"
-]
-
-[project.optional-dependencies]
-dev = [
-  "ruff>=0.5.0",
-  "pytest>=8.2",
-  "mypy>=1.10",
-  "types-python-dateutil>=2.9.0.20250822"
-]
-
-[project.scripts]
-cashsim = "cashsim.__main__:main"
-
-[tool.ruff]
-line-length = 100
-target-version = "py312"
-
-[tool.ruff.lint]
-select = [
-  "E", "F",   # pyflakes/pycodestyle
-  "I",        # import sorting
-  "UP",       # pyupgrade
-  "B",        # bugbear
-  "SIM"       # flake8-simplify
-]
-
-[tool.ruff.format]
-quote-style = "double"
-
-[tool.pyright]
-# Use the src layout
-venvPath = "."
-venv = ".venv"
-reportMissingTypeStubs = "warning"
-typeCheckingMode = "basic"
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/cashsim"]
-sources = ["src"]
-
-
-===== pyrightconfig.json =====
-{
-  "typeCheckingMode": "basic",
-  "venv": ".venv",
-  "exclude": ["**/.venv/**", "**/.git/**", "**/__pycache__/**"],
-  "reportUnknownParameterType": "error",
-  "reportUnknownArgumentType": "error",
-  "reportUnknownMemberType": "error",
-  "reportUnknownVariableType": "error",
-  "reportUnknownLambdaType": "error",
-  "executionEnvironments": [
-    { "root": "src" }
-  ]
-}
-
-
-===== README.md =====
-# CashSim
-
-Streamlit cash flow simulator.
-
-
-===== src/cashsim/analytics/break_even.py =====
+<file path="src/cashsim/analytics/break_even.py">
 from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
@@ -653,9 +390,9 @@ def break_even_grid(dials: Dials, candidates: Iterable[float], *, days: int = 31
             )
         )
     return pd.DataFrame([r.__dict__ for r in rows]).sort_values("weekday_earnings")
+</file>
 
-
-===== src/cashsim/analytics/snapshot.py =====
+<file path="src/cashsim/analytics/snapshot.py">
 from __future__ import annotations
 
 from datetime import date
@@ -692,19 +429,13 @@ def monthly_snapshot(dials: Dials, months: int = 1) -> dict:
             }
         )
     return result
+</file>
 
-
-===== src/cashsim/analytics/__init__.py =====
-
-
-===== src/cashsim/constants.py =====
+<file path="src/cashsim/io/__init__.py">
 from __future__ import annotations
+</file>
 
-DAYS_PER_YEAR = 365
-CARD_ACT_MIN_DAYS = 21  # typical minimum days between statement close and due date
-
-
-===== src/cashsim/io/config_io.py =====
+<file path="src/cashsim/io/config_io.py">
 from __future__ import annotations
 
 import json
@@ -727,9 +458,9 @@ def load_config(path: str | Path) -> Dials:
 def save_config(dials: Dials, path: str | Path) -> None:
     p = Path(path)
     p.write_text(dials.model_dump_json(indent=2), encoding="utf-8")
+</file>
 
-
-===== src/cashsim/io/gsheets.py =====
+<file path="src/cashsim/io/gsheets.py">
 from __future__ import annotations
 from typing import Dict
 import pandas as pd
@@ -765,118 +496,9 @@ def read_wishlist_by_url(sheet_url: str, worksheet_name: str, sa_info: Dict) -> 
     ).fillna(0).astype(int)
 
     return df[wanted]
+</file>
 
-
-===== src/cashsim/io/__init__.py =====
-from __future__ import annotations
-
-
-===== src/cashsim/main.py =====
-from __future__ import annotations
-
-import subprocess
-import sys
-import importlib.resources as ir
-
-
-def main() -> None:
-    # Run the bundled Streamlit app no matter where the package is installed.
-    with ir.as_file(ir.files("cashsim.ui") / "streamlit_app.py") as app:
-        sys.exit(subprocess.call([sys.executable, "-m", "streamlit", "run", str(app)]))
-
-
-if __name__ == "__main__":
-    main()
-
-
-===== src/cashsim/models.py =====
-from __future__ import annotations
-
-from datetime import date
-from typing import Literal, Optional
-
-from pydantic import BaseModel, Field, field_validator
-
-
-class Bill(BaseModel):
-    name: str = Field(min_length=1)
-    usual_day: int = Field(ge=1, le=31)
-    amount: float = Field(ge=0)
-
-    @field_validator("amount")
-    @classmethod
-    def two_decimals(cls, v: float) -> float:
-        return round(float(v), 2)
-
-
-class CreditCard(BaseModel):
-    name: str = Field(min_length=1)
-    apr: float = Field(ge=0, description="APR as decimal, e.g. 0.2499 for 24.99%")
-    balance: float = Field(ge=0)
-    due_day: int = Field(ge=1, le=31, description="Payment due day")
-    min_pct: float = Field(ge=0, le=1, description="e.g. 0.02 for 2%")
-    min_floor: float = Field(ge=0, description="absolute floor, e.g. $25")
-    statement_day: Optional[int] = Field(
-        default=None,
-        ge=1,
-        le=31,
-        description="If None, we approximate as due_day-21 (CARD Act minimum).",
-    )
-
-
-class IOU(BaseModel):
-    name: str = Field(min_length=1)
-    balance: float = Field(ge=0)
-    apr: float = Field(ge=0, description="APR decimal; 0.0 if no interest")
-    due_day: Optional[int] = Field(default=None, ge=1, le=31)
-    min_pct: float = Field(default=0.0, ge=0, le=1)
-    min_floor: float = Field(default=0.0, ge=0)
-
-
-class OneOff(BaseModel):
-    name: str = Field(min_length=1)
-    due_date: date
-    amount: float = Field(ge=0)
-    priority: int = 0  # higher = fund sooner
-    must_pay: bool = True
-
-    @field_validator("amount")
-    @classmethod
-    def two_decimals(cls, v: float) -> float:
-        return round(float(v), 2)
-
-
-class InvestmentSettings(BaseModel):
-    enable: bool = True
-    hysa_apy: float = Field(ge=0, default=0.045)
-    expected_market_return: float = Field(ge=0, default=0.07)
-    use_dca: bool = True
-    roth_target: float = Field(ge=0, default=0.0)
-    trad_target: float = Field(ge=0, default=0.0)
-    hysa_target: float = Field(ge=0, default=0.0)
-    robinhood_target: float = Field(ge=0, default=0.0)
-    ira_year_limit: float = Field(ge=0, default=7000.0)
-    roth_ok_today: bool = True
-
-
-class Dials(BaseModel):
-    current_cash: float = Field(ge=0)
-    safety_cushion: float = Field(ge=0)
-    weekday_earnings: float = Field(ge=0, description="Treated as DAILY earnings (7d/wk)")
-    gas_pct: float = Field(ge=0, le=1)
-    gas_fill_size: float = Field(gt=0)
-    bills: list[Bill]
-    credit_cards: list[CreditCard] = []
-    ious: list[IOU] = []
-    oneoffs: list[OneOff] = []
-    invest: InvestmentSettings = InvestmentSettings()
-    interest_mode: Literal["statement_adb", "due_simple"] = "statement_adb"
-    extra_strategy: Literal["avalanche", "snowball"] = "avalanche"
-    # 👇 NEW: dates you cannot drive (earnings forced to 0 on these days in the planner)
-    blackouts: list[date] = []
-
-
-===== src/cashsim/planning/planner.py =====
+<file path="src/cashsim/planning/planner.py">
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -1236,12 +858,9 @@ def constant_target_from_schedule(rows: List[DailyPlanRow], blackout_dates: Iter
     bset = set(blackout_dates or [])
     needers = [r.earn_required for r in rows if r.date not in bset]
     return round(max(needers), 2) if needers else 0.0
+</file>
 
-
-===== src/cashsim/planning/__init__.py =====
-
-
-===== src/cashsim/sim/core.py =====
+<file path="src/cashsim/sim/core.py">
 from __future__ import annotations
 
 import re
@@ -1560,9 +1179,9 @@ def simulate_month(
         else 0.0,
     )
     return df, metrics
+</file>
 
-
-===== src/cashsim/sim/events.py =====
+<file path="src/cashsim/sim/events.py">
 from __future__ import annotations
 
 from datetime import date
@@ -1627,9 +1246,9 @@ def add_extra_event(
             "reserve_7d_gas": reserve_7d_gas,
         }
     )
+</file>
 
-
-===== src/cashsim/sim/gas.py =====
+<file path="src/cashsim/sim/gas.py">
 from __future__ import annotations
 
 
@@ -1673,9 +1292,9 @@ def predict_fill_cost_7d(
     end_fills = int((gas_bucket + added) // fill_size)
     new_fills = max(0, end_fills - start_fills)
     return round(new_fills * fill_size, 2)
+</file>
 
-
-===== src/cashsim/sim/interest.py =====
+<file path="src/cashsim/sim/interest.py">
 from __future__ import annotations
 
 from datetime import date, timedelta
@@ -1738,9 +1357,9 @@ def post_simple_interest_if_due(
                 out.append((c.name, i_amt))
                 last_post[c.name] = day
     return out
+</file>
 
-
-===== src/cashsim/sim/reserve.py =====
+<file path="src/cashsim/sim/reserve.py">
 from __future__ import annotations
 
 from datetime import date, timedelta
@@ -1810,9 +1429,9 @@ def reserve_next_7_days(
     gas_pred = predict_fill_cost_7d(gas_bucket, daily_earn, gas_pct, fill_size)
     total = round(amt_bills + amt_mins + gas_pred, 2)
     return total, round(amt_bills, 2), round(amt_mins, 2), round(gas_pred, 2)
+</file>
 
-
-===== src/cashsim/sim/roll.py =====
+<file path="src/cashsim/sim/roll.py">
 from __future__ import annotations
 
 from datetime import date
@@ -1836,9 +1455,27 @@ def sum_non_debt_bills_due_today(day: date, bills: list[Bill]) -> float:
         if next_due_date(day, b.usual_day) == day:
             total += b.amount
     return round(total, 2)
+</file>
+
+<file path="src/cashsim/sim/types_runtime.py">
+from __future__ import annotations
+
+from dataclasses import dataclass
 
 
-===== src/cashsim/sim/types.py =====
+@dataclass(slots=True)
+class CardRT:
+    """Runtime-lean card structure for hot loops (validated at the edges)."""
+    name: str
+    apr: float
+    balance_cents: int
+    due_day: int
+    min_pct: float
+    min_floor_cents: int
+    statement_day: int | None
+</file>
+
+<file path="src/cashsim/sim/types.py">
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -1856,30 +1493,9 @@ class SimMetrics:
     friend_ask_latest_date: Optional[date]
     cushion_breach_date: Optional[date]
     accrued_interest_estimate: float
+</file>
 
-
-===== src/cashsim/sim/types_runtime.py =====
-from __future__ import annotations
-
-from dataclasses import dataclass
-
-
-@dataclass(slots=True)
-class CardRT:
-    """Runtime-lean card structure for hot loops (validated at the edges)."""
-    name: str
-    apr: float
-    balance_cents: int
-    due_day: int
-    min_pct: float
-    min_floor_cents: int
-    statement_day: int | None
-
-
-===== src/cashsim/sim/__init__.py =====
-
-
-===== src/cashsim/ui/components.py =====
+<file path="src/cashsim/ui/components.py">
 from __future__ import annotations
 
 import pandas as pd
@@ -1990,9 +1606,9 @@ def oneoff_editor(df: pd.DataFrame, key="oneoff_editor") -> pd.DataFrame:
         },
         key=key,
     )
+</file>
 
-
-===== src/cashsim/ui/formatters.py =====
+<file path="src/cashsim/ui/formatters.py">
 from __future__ import annotations
 
 import pandas as pd
@@ -2019,9 +1635,9 @@ def stringify_events_columns(df: pd.DataFrame) -> pd.DataFrame:
         if col in out.columns:
             out[col] = out[col].apply(_fmt_pair_list)
     return out
+</file>
 
-
-===== src/cashsim/ui/state.py =====
+<file path="src/cashsim/ui/state.py">
 from __future__ import annotations
 
 from datetime import date
@@ -2088,6 +1704,9 @@ def init_session_once() -> None:
     st.session_state.setdefault("invest", InvestmentSettings().model_dump())
     st.session_state.setdefault("interest_mode", "statement_adb")
     st.session_state.setdefault("extra_strategy", "avalanche")
+    st.session_state.setdefault(
+    "blackouts_df", pd.DataFrame({"date": pd.Series([], dtype="datetime64[ns]")})
+)
 
 
 def _coerce_date(v):
@@ -2130,6 +1749,11 @@ def dials_from_state() -> Dials:
         OneOff(**{**row, "due_date": _coerce_date(row["due_date"])})
         for row in st.session_state["oneoff_table"].to_dict(orient="records")
     ]
+    
+    blackouts: list[date] = []
+    for v in st.session_state.get("blackouts_df", pd.DataFrame({"date": []}))["date"]:
+        if pd.notna(v):
+            blackouts.append(pd.to_datetime(v).date())
 
     return Dials(
         current_cash=st.session_state["current_cash"],
@@ -2145,9 +1769,9 @@ def dials_from_state() -> Dials:
         interest_mode=st.session_state["interest_mode"],
         extra_strategy=st.session_state["extra_strategy"],
     )
+</file>
 
-
-===== src/cashsim/ui/streamlit_app.py =====
+<file path="src/cashsim/ui/streamlit_app.py">
 from __future__ import annotations
 
 import json
@@ -2179,9 +1803,9 @@ from cashsim.ui.components import (
 from cashsim.ui.formatters import stringify_events_columns
 from cashsim.ui.state import dials_from_state, init_session_once
 from cashsim.utils.date_utils import next_due_date_cached as next_due_date
-from cashsim.io.gsheets import read_wishlist_by_url  # NEW
+from cashsim.io.gsheets import read_wishlist_by_url  # Google Sheets integration
 
-# Pandas CoW: future-proof semantics and fewer hidden copies (pandas 3.0 default)
+# Pandas CoW: future-proof semantics and fewer hidden copies
 pd.options.mode.copy_on_write = True
 
 st.set_page_config(page_title="CashSim — Single Page", layout="wide")
@@ -2218,6 +1842,9 @@ def _load_config_cached(path: str, mtime: float) -> Dials:
     return load_config(path)
 
 
+# ------------------
+# Title & Tabs
+# ------------------
 st.title("CashSim (single-page)")
 st.caption(
     "Edit inputs, bills, debt, and one-offs — then simulate, analyze break-even, and plan a daily target — all here."
@@ -2241,6 +1868,7 @@ with tab_inputs:
         try:
             mtime = os.path.getmtime(cfg_path) if os.path.exists(cfg_path) else 0.0
             d = _load_config_cached(cfg_path, mtime)
+            # Hydrate session state from config
             st.session_state.update(
                 {
                     "current_cash": float(d.current_cash),
@@ -2255,8 +1883,10 @@ with tab_inputs:
                     "interest_mode": d.interest_mode,
                     "extra_strategy": d.extra_strategy,
                     "invest": d.invest.model_dump(),
-                    # if config has blackouts, hydrate an editor table
-                    "blackouts_df": pd.DataFrame({"date": getattr(d, "blackouts", [])}),
+                    # Ensure datetime64[ns] dtype for blackouts editor
+                    "blackouts_df": pd.DataFrame(
+                        {"date": pd.to_datetime(getattr(d, "blackouts", []), errors="coerce")}
+                    ),
                 }
             )
             st.rerun()
@@ -2282,24 +1912,38 @@ with tab_inputs:
                     "interest_mode": d.interest_mode,
                     "extra_strategy": d.extra_strategy,
                     "invest": d.invest.model_dump(),
-                    "blackouts_df": pd.DataFrame({"date": getattr(d, "blackouts", [])}),
+                    "blackouts_df": pd.DataFrame(
+                        {"date": pd.to_datetime(getattr(d, "blackouts", []), errors="coerce")}
+                    ),
                 }
             )
-
             st.rerun()
         except Exception as e:
             st.error(str(e))
 
+    # Prepare a Dials for download/save that includes blackouts even if ui.state.dials_from_state() doesn't
+    def _dials_with_blackouts() -> Dials:
+        base = dials_from_state()
+        # Pull editor dates and coerce to date objects
+        bdf = st.session_state.get("blackouts_df", pd.DataFrame({"date": []})).copy()
+        if "date" not in bdf.columns:
+            bdf["date"] = pd.Series([], dtype="datetime64[ns]")
+        dates: list[date] = []
+        for v in pd.to_datetime(bdf["date"], errors="coerce"):
+            if pd.notna(v):
+                dates.append(pd.to_datetime(v).date())
+        return base.model_copy(update={"blackouts": dates})
+
     st.download_button(
         "Download current config",
-        data=dials_from_state().model_dump_json(indent=2),
+        data=_dials_with_blackouts().model_dump_json(indent=2),
         file_name="config.json",
         mime="application/json",
     )
 
     if c2.button("Save file", use_container_width=True):
         try:
-            save_config(dials_from_state(), cfg_path)
+            save_config(_dials_with_blackouts(), cfg_path)
             st.success(f"Saved {cfg_path}")
         except Exception as e:
             st.error(str(e))
@@ -2367,7 +2011,7 @@ with tab_debt:
     sim_df, _ = run_sim(fingerprint, date.today(), 60)
     ev = sim_df.explode("cc_events", ignore_index=True)
     if "cc_events" in ev.columns and ev["cc_events"].notna().any():
-        base = ev.loc[ev["cc_events"].notna(), ["date", "cc_events"]].reset_index(drop=True)
+        base = ev.loc(ev["cc_events"].notna(), ["date", "cc_events"]].reset_index(drop=True)
         events_df = pd.json_normalize(base["cc_events"]).reset_index(drop=True)
         if "date" in events_df.columns:
             events_df = events_df.rename(columns={"date": "event_date"})
@@ -2474,7 +2118,7 @@ with tab_analytics:
     st.json(snap)
 
 # ------------------
-# Planner
+# Planner (with robust DateColumn handling for blackouts)
 # ------------------
 with tab_planner:
     st.header("Planner")
@@ -2534,18 +2178,27 @@ with tab_planner:
         )
         cap = None if daily_cap_val <= 0 else float(daily_cap_val)
 
-        # 👇 Blackouts editor
+        # --- Blackouts editor (robust dtype handling) ---
         st.markdown("**No-drive dates** (add rows as needed)")
-        st.session_state.setdefault("blackouts_df", pd.DataFrame(columns=["date"]))
+        st.session_state.setdefault(
+            "blackouts_df", pd.DataFrame({"date": pd.Series([], dtype="datetime64[ns]")})
+        )
+        _blackouts = st.session_state["blackouts_df"].copy()
+        if "date" not in _blackouts.columns:
+            _blackouts["date"] = pd.Series([], dtype="datetime64[ns]")
+        else:
+            _blackouts["date"] = pd.to_datetime(_blackouts["date"], errors="coerce")
+
         st.session_state["blackouts_df"] = st.data_editor(
-            st.session_state["blackouts_df"],
+            _blackouts,
             num_rows="dynamic",
             column_config={"date": st.column_config.DateColumn("date")},
             use_container_width=True,
             key="blackouts_editor",
         )
+
         blackout_dates: list[date] = []
-        for v in st.session_state["blackouts_df"].get("date", []):
+        for v in pd.to_datetime(st.session_state["blackouts_df"]["date"], errors="coerce"):
             if pd.notna(v):
                 blackout_dates.append(pd.to_datetime(v).date())
 
@@ -2575,10 +2228,12 @@ with tab_planner:
             )
 
         if not df.empty:
-            df["date"] = pd.to_datetime(df["date"])
+            df["date"] = pd.to_datetime(df["date"])  # ensure datetime index for charts
 
             st.line_chart(
-                df.set_index("date")[["earn_required", "earn_capped"]],
+                df.set_index("date")[
+                    ["earn_required", "earn_capped"]
+                ],
                 use_container_width=True,
             )
 
@@ -2634,8 +2289,15 @@ with tab_wishlist:
 
             # Build a day-by-day plan first (respecting blackouts)
             dials = dials_from_state()
+
+            # Coerce blackouts dtype then extract
+            bdf = st.session_state.get("blackouts_df", pd.DataFrame({"date": []})).copy()
+            if "date" not in bdf.columns:
+                bdf["date"] = pd.Series([], dtype="datetime64[ns]")
+            else:
+                bdf["date"] = pd.to_datetime(bdf["date"], errors="coerce")
             blackout_dates: list[date] = []
-            for v in st.session_state.get("blackouts_df", pd.DataFrame(columns=["date"]))["date"]:
+            for v in bdf["date"]:
                 if pd.notna(v):
                     blackout_dates.append(pd.to_datetime(v).date())
 
@@ -2650,7 +2312,9 @@ with tab_wishlist:
             plan_df = pd.DataFrame([r.__dict__ for r in plan.rows])
             plan_df["date"] = pd.to_datetime(plan_df["date"])
             base = 0.0  # change to float(dials.safety_cushion) if you want cushion as the hard floor
-            plan_df["safe_surplus"] = (plan_df["end_balance"] - (base + plan_df["reserve_7d_total"])).round(2)
+            plan_df["safe_surplus"] = (
+                plan_df["end_balance"] - (base + plan_df["reserve_7d_total"])  # type: ignore[operator]
+            ).round(2)
 
             # Greedy fund by Priority (higher first)
             items = wish.sort_values(["Priority", "Item"], ascending=[False, True]).to_dict("records")
@@ -2683,7 +2347,7 @@ with tab_wishlist:
                     "Price": it["Price"],
                     "Priority": it["Priority"],
                     "Earliest fully-funded": when,
-                    "Days until": None if when is None else (when - today).days
+                    "Days until": None if when is None else (when - today).days,
                 })
             out = pd.DataFrame(out_rows).sort_values(
                 ["Earliest fully-funded", "Priority"], na_position="last", ascending=[True, False]
@@ -2694,12 +2358,9 @@ with tab_wishlist:
             st.error("Missing st.secrets['gcp_service_account']. See instructions below.")
         except Exception as e:
             st.error(str(e))
+</file>
 
-
-===== src/cashsim/ui/__init__.py =====
-
-
-===== src/cashsim/utils/date_utils.py =====
+<file path="src/cashsim/utils/date_utils.py">
 from __future__ import annotations
 
 import calendar
@@ -2750,9 +2411,9 @@ def last_statement_close_date(today: date, due_day: int, statement_day: int | No
         sd = statement_day or prior_statement_day(due_day)
         return date(from_prev.year, from_prev.month, clamp_day(from_prev.year, from_prev.month, sd))
     return ns
+</file>
 
-
-===== src/cashsim/utils/money.py =====
+<file path="src/cashsim/utils/money.py">
 from __future__ import annotations
 
 from decimal import Decimal, ROUND_HALF_UP
@@ -2773,12 +2434,9 @@ def from_cents(c: int) -> float:
 def round_cents(x: float | str | Decimal) -> float:
     """Round a dollar amount to 2 decimals (half-up) and return float."""
     return float(Decimal(str(x)).quantize(CENT, rounding=ROUND_HALF_UP))
+</file>
 
-
-===== src/cashsim/utils/__init__.py =====
-
-
-===== src/cashsim/__init__.py =====
+<file path="src/cashsim/__init__.py">
 from .models import Bill, CreditCard, IOU, OneOff, InvestmentSettings, Dials
 from .sim.core import simulate_month
 from .sim.types import SimMetrics
@@ -2797,5 +2455,522 @@ __all__ = [
     "break_even_grid",
     "monthly_snapshot",
 ]
+</file>
+
+<file path="src/cashsim/constants.py">
+from __future__ import annotations
+
+DAYS_PER_YEAR = 365
+CARD_ACT_MIN_DAYS = 21  # typical minimum days between statement close and due date
+</file>
+
+<file path="src/cashsim/main.py">
+from __future__ import annotations
+
+import subprocess
+import sys
+import importlib.resources as ir
 
 
+def main() -> None:
+    # Run the bundled Streamlit app no matter where the package is installed.
+    with ir.as_file(ir.files("cashsim.ui") / "streamlit_app.py") as app:
+        sys.exit(subprocess.call([sys.executable, "-m", "streamlit", "run", str(app)]))
+
+
+if __name__ == "__main__":
+    main()
+</file>
+
+<file path="src/cashsim/models.py">
+from __future__ import annotations
+
+from datetime import date
+from typing import Literal, Optional
+
+from pydantic import BaseModel, Field, field_validator
+
+
+class Bill(BaseModel):
+    name: str = Field(min_length=1)
+    usual_day: int = Field(ge=1, le=31)
+    amount: float = Field(ge=0)
+
+    @field_validator("amount")
+    @classmethod
+    def two_decimals(cls, v: float) -> float:
+        return round(float(v), 2)
+
+
+class CreditCard(BaseModel):
+    name: str = Field(min_length=1)
+    apr: float = Field(ge=0, description="APR as decimal, e.g. 0.2499 for 24.99%")
+    balance: float = Field(ge=0)
+    due_day: int = Field(ge=1, le=31, description="Payment due day")
+    min_pct: float = Field(ge=0, le=1, description="e.g. 0.02 for 2%")
+    min_floor: float = Field(ge=0, description="absolute floor, e.g. $25")
+    statement_day: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=31,
+        description="If None, we approximate as due_day-21 (CARD Act minimum).",
+    )
+
+
+class IOU(BaseModel):
+    name: str = Field(min_length=1)
+    balance: float = Field(ge=0)
+    apr: float = Field(ge=0, description="APR decimal; 0.0 if no interest")
+    due_day: Optional[int] = Field(default=None, ge=1, le=31)
+    min_pct: float = Field(default=0.0, ge=0, le=1)
+    min_floor: float = Field(default=0.0, ge=0)
+
+
+class OneOff(BaseModel):
+    name: str = Field(min_length=1)
+    due_date: date
+    amount: float = Field(ge=0)
+    priority: int = 0  # higher = fund sooner
+    must_pay: bool = True
+
+    @field_validator("amount")
+    @classmethod
+    def two_decimals(cls, v: float) -> float:
+        return round(float(v), 2)
+
+
+class InvestmentSettings(BaseModel):
+    enable: bool = True
+    hysa_apy: float = Field(ge=0, default=0.045)
+    expected_market_return: float = Field(ge=0, default=0.07)
+    use_dca: bool = True
+    roth_target: float = Field(ge=0, default=0.0)
+    trad_target: float = Field(ge=0, default=0.0)
+    hysa_target: float = Field(ge=0, default=0.0)
+    robinhood_target: float = Field(ge=0, default=0.0)
+    ira_year_limit: float = Field(ge=0, default=7000.0)
+    roth_ok_today: bool = True
+
+
+class Dials(BaseModel):
+    current_cash: float = Field(ge=0)
+    safety_cushion: float = Field(ge=0)
+    weekday_earnings: float = Field(ge=0, description="Treated as DAILY earnings (7d/wk)")
+    gas_pct: float = Field(ge=0, le=1)
+    gas_fill_size: float = Field(gt=0)
+    bills: list[Bill]
+    credit_cards: list[CreditCard] = []
+    ious: list[IOU] = []
+    oneoffs: list[OneOff] = []
+    invest: InvestmentSettings = InvestmentSettings()
+    interest_mode: Literal["statement_adb", "due_simple"] = "statement_adb"
+    extra_strategy: Literal["avalanche", "snowball"] = "avalanche"
+    # 👇 NEW: dates you cannot drive (earnings forced to 0 on these days in the planner)
+    blackouts: list[date] = []
+</file>
+
+<file path="bobbie_config.json">
+{
+  "current_cash": 99.29,
+  "safety_cushion": 10,
+  "weekday_earnings": 26.79,
+  "gas_pct": 0.185,
+  "gas_fill_size": 25.0,
+
+  "bills": [
+    {
+      "name": "Patreon",
+      "usual_day": 1,
+      "amount": 2.00
+    },
+    {
+      "name": "Patreon (micro tier)",
+      "usual_day": 15,
+      "amount": 1.00
+    },
+    {
+      "name": "Headspace",
+      "usual_day": 29,
+      "amount": 9.99
+    },
+    {
+      "name": "DSA (donation)",
+      "usual_day": 12,
+      "amount": 2.00
+    }
+  ],
+
+  "credit_cards": [
+    {
+      "name": "Apple Card (Goldman Sachs)",
+      "apr": 0.2624,
+      "balance": 1377.73,
+      "due_day": 30,
+      "min_pct": 0.01,
+      "min_floor": 25.0,
+      "statement_day": 31
+    },
+    {
+      "name": "Bank of America Visa",
+      "apr": 0.2024,
+      "balance": 3956.62,
+      "due_day": 7,
+      "min_pct": 0.01,
+      "min_floor": 35.0,
+      "statement_day": 10
+    },
+    {
+      "name": "Capital One Quicksilver (1845)",
+      "apr": 0.2974,
+      "balance": 112.33,
+      "due_day": 6,
+      "min_pct": 0.01,
+      "min_floor": 25.0,
+      "statement_day": 11
+    }
+  ],
+
+  "student_loans": [
+    {
+      "name": "Direct Subsidized (2025–26)",
+      "apr": 0.0639,
+      "balance": 4500.00,
+      "due_day": null,
+      "min_pct": null,
+      "min_floor": null,
+      "statement_day": null,
+      "notes": "In-school and 6-month grace interest paid by DoE. Disbursements: $2,250 Fall 2025, $2,250 Spring 2026."
+    },
+    {
+      "name": "Direct Unsubsidized (2025–26)",
+      "apr": 0.0639,
+      "balance": 1135.00,
+      "due_day": null,
+      "min_pct": null,
+      "min_floor": null,
+      "statement_day": null,
+      "notes": "Interest accrues while in school. Disbursements: $568 Fall 2025, $567 Spring 2026."
+    }
+  ],
+
+
+  "interest_mode": "statement_adb",
+  "extra_strategy": "avalanche"
+}
+</file>
+
+<file path="config.json">
+{
+  "current_cash": 178.0,
+  "safety_cushion": 100.0,
+  "weekday_earnings": 100.0,
+  "gas_pct": 0.185,
+  "gas_fill_size": 25.0,
+  "bills": [
+    {
+      "name": "Apple Music",
+      "usual_day": 28,
+      "amount": 10.99
+    },
+    {
+      "name": "Bank of America Maintenance",
+      "usual_day": 5,
+      "amount": 12.0
+    },
+    {
+      "name": "Criterion",
+      "usual_day": 11,
+      "amount": 11.0
+    },
+    {
+      "name": "DSA",
+      "usual_day": 12,
+      "amount": 11
+    },
+    {
+      "name": "Statefarm - Kate's Half",
+      "usual_day": 13,
+      "amount": 145.0
+    },
+    {
+      "name": "ChatGPT",
+      "usual_day": 15,
+      "amount": 20.0
+    },
+    {
+      "name": "Reform & Revolution",
+      "usual_day": 17,
+      "amount": 10.0
+    },
+    {
+      "name": "YouTube",
+      "usual_day": 20,
+      "amount": 9.06
+    },
+    {
+      "name": "Claude AI",
+      "usual_day": 25,
+      "amount": 20.0
+    },
+    {
+      "name": "iCloud",
+      "usual_day": 29,
+      "amount": 2.99
+    },
+    {
+      "name": "Eversource Electric - Bobbie's Half",
+      "usual_day": 24,
+      "amount": 105.0
+    },
+    {
+      "name": "National Grid Gas - Bobbie's Half",
+      "usual_day": 25,
+      "amount": 68.0
+    },{
+      "name": "OneDrive",
+      "usual_day": 13,
+      "amount": 1.99
+    },{
+      "name": "Verizon Fios - Bobbie's Half",
+      "usual_day": 28,
+      "amount": 45
+    }
+  ],
+  "credit_cards": [
+    {
+      "name": "Chase VISA",
+      "apr": 0.2499,
+      "balance": 9141.96,
+      "due_day": 24,
+      "min_pct": 0.0335,
+      "min_floor": 40.0,
+      "statement_day": null
+    },
+    {
+      "name": "Bank of America",
+      "apr": 0.2124,
+      "balance": 3070.63,
+      "due_day": 5,
+      "min_pct": 0.0274,
+      "min_floor": 35.0,
+      "statement_day": null
+    },
+    {
+      "name": "Samsung",
+      "apr": 0.0,
+      "balance": 1200.0,
+      "due_day": 3,
+      "min_pct": 0.0,
+      "min_floor": 40.12,
+      "statement_day": null
+    },
+    {
+      "name": "Aidvantage",
+      "apr": 0.0,
+      "balance": 3821.26,
+      "due_day": 11,
+      "min_pct": 0.0,
+      "min_floor": 0.0,
+      "statement_day": null
+    },
+    {
+      "name": "DentalFirst",
+      "apr": 0.3299,
+      "balance": 2236.0,
+      "due_day": 10,
+      "min_pct": 0.0362,
+      "min_floor": 30.0,
+      "statement_day": null
+    },
+    {
+      "name": "CreditOne",
+      "apr": 0.2949,
+      "balance": 976.13,
+      "due_day": 13,
+      "min_pct": 0.05,
+      "min_floor": 30.0,
+      "statement_day": null
+    }
+  ],
+  "ious": [
+    {
+      "name": "Mama",
+      "balance": 1050.0,
+      "apr": 0.0,
+      "due_day": null,
+      "min_pct": 0.0,
+      "min_floor": 0.0
+    },
+    {
+      "name": "Papa",
+      "balance": 300.0,
+      "apr": 0.0,
+      "due_day": null,
+      "min_pct": 0.0,
+      "min_floor": 0.0
+    },
+    {
+      "name": "Bobbie (NJ hotel)",
+      "balance": 300.0,
+      "apr": 0.0,
+      "due_day": null,
+      "min_pct": 0.0,
+      "min_floor": 0.0
+    },{
+      "name": "Kate",
+      "balance": 30000,
+      "apr": 0.0,
+      "due_day": null,
+      "min_pct": 0.0,
+      "min_floor": 0.0
+    }
+  ],
+  "oneoffs": [
+    {
+      "name": "Auto Repair Service",
+      "due_date": "2025-09-30",
+      "amount": 521.0,
+      "priority": 2,
+      "must_pay": true
+    },
+    {
+      "name": "MA Annual Inspection Sticker",
+      "due_date": "2025-11-05",
+      "amount": 35.0,
+      "priority": 1,
+      "must_pay": true
+    },
+    {
+      "name": "Car Registration",
+      "due_date": "2025-10-29",
+      "amount": 135.0,
+      "priority": 1,
+      "must_pay": true
+    },
+    {
+      "name": "MA License",
+      "due_date": "2025-10-29",
+      "amount": 115.0,
+      "priority": 1,
+      "must_pay": true
+    },{
+      "name": "Car Key Copy for Bobbie",
+      "due_date": "2025-11-29",
+      "amount": 130.0,
+      "priority": 3,
+      "must_pay": false
+    },{
+      "name": "Auto Insurance Down Payment",
+      "due_date": "2025-10-23",
+      "amount": 500.0,
+      "priority": 1,
+      "must_pay": true
+    }
+  ],
+  "invest": {
+    "enable": true,
+    "hysa_apy": 0.045,
+    "expected_market_return": 0.07,
+    "use_dca": true,
+    "roth_target": 778000,
+    "trad_target": 1500000,
+    "hysa_target": 0.0,
+    "robinhood_target": 0.0,
+    "ira_year_limit": 7000.0,
+    "roth_ok_today": true
+  },
+  "interest_mode": "statement_adb",
+  "extra_strategy": "avalanche"
+}
+</file>
+
+<file path="pyproject.toml">
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cashsim"
+version = "0.1.0"
+description = "Cash flow simulator with Streamlit UI"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "You" }]
+dependencies = [
+  # Core
+  "pydantic>=2.10,<3",
+  "pandas>=2.2.3,<3.0",          # 2.2.3+ has 3.13 wheels
+  "python-dateutil>=2.9.0.post0", # relativedelta
+  # UI
+  "streamlit>=1.49,<2.0",
+  # Streamlit dataframes use Arrow underneath; keep it modern for 3.13 wheels
+  "pyarrow>=21,<22",
+  # NEW: Google Sheets integration
+  "gspread>=6,<7",
+  "google-auth>=2.0",
+  "gspread-dataframe>=2.0.0"
+]
+
+[project.optional-dependencies]
+dev = [
+  "ruff>=0.5.0",
+  "pytest>=8.2",
+  "mypy>=1.10",
+  "types-python-dateutil>=2.9.0.20250822"
+]
+
+[project.scripts]
+cashsim = "cashsim.__main__:main"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+  "E", "F",   # pyflakes/pycodestyle
+  "I",        # import sorting
+  "UP",       # pyupgrade
+  "B",        # bugbear
+  "SIM"       # flake8-simplify
+]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pyright]
+# Use the src layout
+venvPath = "."
+venv = ".venv"
+reportMissingTypeStubs = "warning"
+typeCheckingMode = "basic"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cashsim"]
+sources = ["src"]
+</file>
+
+<file path="pyrightconfig.json">
+{
+  "typeCheckingMode": "basic",
+  "venv": ".venv",
+  "exclude": ["**/.venv/**", "**/.git/**", "**/__pycache__/**"],
+  "reportUnknownParameterType": "error",
+  "reportUnknownArgumentType": "error",
+  "reportUnknownMemberType": "error",
+  "reportUnknownVariableType": "error",
+  "reportUnknownLambdaType": "error",
+  "executionEnvironments": [
+    { "root": "src" }
+  ]
+}
+</file>
+
+<file path="README.md">
+# CashSim
+
+Streamlit cash flow simulator.
+</file>
+
+</files>

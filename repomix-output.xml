@@ -79,8 +79,9 @@ src/
       date_utils.py
       money.py
     __init__.py
+    __main__.py
+    cli.py
     constants.py
-    main.py
     models.py
 .gitignore
 .repomixignore
@@ -1761,6 +1762,304 @@ def dials_from_state() -> Dials:
     )
 </file>
 
+<file path="src/cashsim/utils/date_utils.py">
+from __future__ import annotations
+
+import calendar
+from datetime import date
+from functools import lru_cache
+
+from dateutil.relativedelta import relativedelta
+
+from cashsim.constants import CARD_ACT_MIN_DAYS
+
+
+def clamp_day(year: int, month: int, day: int) -> int:
+    last = calendar.monthrange(year, month)[1]
+    return min(day, last)
+
+
+def next_due_date(today: date, usual_day: int) -> date:
+    cand = date(today.year, today.month, clamp_day(today.year, today.month, usual_day))
+    if cand >= today:
+        return cand
+    nxt = today + relativedelta(months=+1)
+    return date(nxt.year, nxt.month, clamp_day(nxt.year, nxt.month, usual_day))
+
+
+@lru_cache(maxsize=4096)
+def next_due_date_cached(today: date, usual_day: int) -> date:
+    """LRU-cached wrapper; safe because inputs are hashable and function is pure."""
+    return next_due_date(today, usual_day)
+
+
+def prior_statement_day(due_day: int) -> int:
+    return max(1, due_day - CARD_ACT_MIN_DAYS)
+
+
+def next_statement_close_date(today: date, due_day: int, statement_day: int | None) -> date:
+    sd = statement_day or prior_statement_day(due_day)
+    cand = date(today.year, today.month, clamp_day(today.year, today.month, sd))
+    if cand >= today:
+        return cand
+    nxt = today + relativedelta(months=+1)
+    return date(nxt.year, nxt.month, clamp_day(nxt.year, nxt.month, sd))
+
+
+def last_statement_close_date(today: date, due_day: int, statement_day: int | None) -> date:
+    ns = next_statement_close_date(today, due_day, statement_day)
+    if ns > today:
+        from_prev = ns + relativedelta(months=-1)
+        sd = statement_day or prior_statement_day(due_day)
+        return date(from_prev.year, from_prev.month, clamp_day(from_prev.year, from_prev.month, sd))
+    return ns
+</file>
+
+<file path="src/cashsim/utils/money.py">
+from __future__ import annotations
+
+from decimal import Decimal, ROUND_HALF_UP
+
+CENT = Decimal("0.01")
+
+
+def to_cents(x: float | str) -> int:
+    """Convert a float/str dollar amount to integer cents (half-up)."""
+    return int((Decimal(str(x)).quantize(CENT, rounding=ROUND_HALF_UP) * 100))
+
+
+def from_cents(c: int) -> float:
+    """Convert integer cents back to a float dollars representation."""
+    return float(Decimal(c) / 100)
+
+
+def round_cents(x: float | str | Decimal) -> float:
+    """Round a dollar amount to 2 decimals (half-up) and return float."""
+    return float(Decimal(str(x)).quantize(CENT, rounding=ROUND_HALF_UP))
+</file>
+
+<file path="src/cashsim/__init__.py">
+from .models import Bill, CreditCard, IOU, OneOff, InvestmentSettings, Dials
+from .sim.core import simulate_month
+from .sim.types import SimMetrics
+from .analytics.break_even import break_even_grid
+from .analytics.snapshot import monthly_snapshot
+
+__all__ = [
+    "Bill",
+    "CreditCard",
+    "IOU",
+    "OneOff",
+    "InvestmentSettings",
+    "Dials",
+    "simulate_month",
+    "SimMetrics",
+    "break_even_grid",
+    "monthly_snapshot",
+]
+</file>
+
+<file path="src/cashsim/__main__.py">
+from .cli import main
+if __name__ == "__main__":
+    main()
+</file>
+
+<file path="src/cashsim/cli.py">
+from __future__ import annotations
+
+import sys
+from importlib.resources import files, as_file
+
+def main() -> None:
+    # Locate the packaged Streamlit script
+    app = files("cashsim.ui").joinpath("streamlit_app.py")
+
+    # Import Streamlit's CLI entry (new location); fall back for older versions
+    try:
+        from streamlit.web.cli import main as st_main  # Streamlit ≥1.10-ish
+    except Exception:  # pragma: no cover
+        try:
+            from streamlit.cli import main as st_main  # older Streamlit
+        except Exception as e:
+            raise SystemExit(
+                "Streamlit is required to run the UI. Install it with `pip install streamlit`."
+            ) from e
+
+    # Ensure a real filesystem path even if installed as a zip
+    with as_file(app) as app_path:
+        sys.argv = ["streamlit", "run", str(app_path)]
+        sys.exit(st_main())
+</file>
+
+<file path="src/cashsim/constants.py">
+from __future__ import annotations
+
+DAYS_PER_YEAR = 365
+CARD_ACT_MIN_DAYS = 21  # typical minimum days between statement close and due date
+</file>
+
+<file path="src/cashsim/models.py">
+from __future__ import annotations
+
+from datetime import date
+from typing import Literal, Optional
+
+from pydantic import BaseModel, Field, field_validator
+
+
+class Bill(BaseModel):
+    name: str = Field(min_length=1)
+    usual_day: int = Field(ge=1, le=31)
+    amount: float = Field(ge=0)
+
+    @field_validator("amount")
+    @classmethod
+    def two_decimals(cls, v: float) -> float:
+        return round(float(v), 2)
+
+
+class CreditCard(BaseModel):
+    name: str = Field(min_length=1)
+    apr: float = Field(ge=0, description="APR as decimal, e.g. 0.2499 for 24.99%")
+    balance: float = Field(ge=0)
+    due_day: int = Field(ge=1, le=31, description="Payment due day")
+    min_pct: float = Field(ge=0, le=1, description="e.g. 0.02 for 2%")
+    min_floor: float = Field(ge=0, description="absolute floor, e.g. $25")
+    statement_day: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=31,
+        description="If None, we approximate as due_day-21 (CARD Act minimum).",
+    )
+
+
+class IOU(BaseModel):
+    name: str = Field(min_length=1)
+    balance: float = Field(ge=0)
+    apr: float = Field(ge=0, description="APR decimal; 0.0 if no interest")
+    due_day: Optional[int] = Field(default=None, ge=1, le=31)
+    min_pct: float = Field(default=0.0, ge=0, le=1)
+    min_floor: float = Field(default=0.0, ge=0)
+
+
+class OneOff(BaseModel):
+    name: str = Field(min_length=1)
+    due_date: date
+    amount: float = Field(ge=0)
+    priority: int = 0  # higher = fund sooner
+    must_pay: bool = True
+
+    @field_validator("amount")
+    @classmethod
+    def two_decimals(cls, v: float) -> float:
+        return round(float(v), 2)
+
+
+class InvestmentSettings(BaseModel):
+    enable: bool = True
+    hysa_apy: float = Field(ge=0, default=0.045)
+    expected_market_return: float = Field(ge=0, default=0.07)
+    use_dca: bool = True
+    roth_target: float = Field(ge=0, default=0.0)
+    trad_target: float = Field(ge=0, default=0.0)
+    hysa_target: float = Field(ge=0, default=0.0)
+    robinhood_target: float = Field(ge=0, default=0.0)
+    ira_year_limit: float = Field(ge=0, default=7000.0)
+    roth_ok_today: bool = True
+
+
+class Dials(BaseModel):
+    current_cash: float = Field(ge=0)
+    safety_cushion: float = Field(ge=0)
+    weekday_earnings: float = Field(ge=0, description="Treated as DAILY earnings (7d/wk)")
+    gas_pct: float = Field(ge=0, le=1)
+    gas_fill_size: float = Field(gt=0)
+    bills: list[Bill]
+    credit_cards: list[CreditCard] = []
+    ious: list[IOU] = []
+    oneoffs: list[OneOff] = []
+    invest: InvestmentSettings = InvestmentSettings()
+    interest_mode: Literal["statement_adb", "due_simple"] = "statement_adb"
+    extra_strategy: Literal["avalanche", "snowball"] = "avalanche"
+    # 👇 NEW: dates you cannot drive (earnings forced to 0 on these days in the planner)
+    blackouts: list[date] = []
+</file>
+
+<file path=".repomixignore">
+# Add patterns to ignore here, one per line
+# Example:
+# *.log
+# tmp/
+.streamlit/secrets.toml
+</file>
+
+<file path="pyrightconfig.json">
+{
+  "typeCheckingMode": "basic",
+  "venv": ".venv",
+  "exclude": ["**/.venv/**", "**/.git/**", "**/__pycache__/**"],
+  "reportUnknownParameterType": "error",
+  "reportUnknownArgumentType": "error",
+  "reportUnknownMemberType": "error",
+  "reportUnknownVariableType": "error",
+  "reportUnknownLambdaType": "error",
+  "executionEnvironments": [
+    { "root": "src" }
+  ]
+}
+</file>
+
+<file path="README.md">
+# CashSim
+
+Streamlit cash flow simulator.
+</file>
+
+<file path="repomix.config.json">
+{
+  "$schema": "https://repomix.com/schemas/latest/schema.json",
+  "input": {
+    "maxFileSize": 52428800
+  },
+  "output": {
+    "filePath": "repomix-output.xml",
+    "style": "xml",
+    "parsableStyle": false,
+    "fileSummary": true,
+    "directoryStructure": true,
+    "files": true,
+    "removeComments": false,
+    "removeEmptyLines": false,
+    "compress": false,
+    "topFilesLength": 5,
+    "showLineNumbers": false,
+    "truncateBase64": false,
+    "copyToClipboard": false,
+    "tokenCountTree": false,
+    "git": {
+      "sortByChanges": true,
+      "sortByChangesMaxCommits": 100,
+      "includeDiffs": false,
+      "includeLogs": false,
+      "includeLogsCount": 50
+    }
+  },
+  "include": [],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": []
+  },
+  "security": {
+    "enableSecurityCheck": true
+  },
+  "tokenCount": {
+    "encoding": "o200k_base"
+  }
+}
+</file>
+
 <file path="src/cashsim/ui/streamlit_app.py">
 from __future__ import annotations
 
@@ -2001,7 +2300,7 @@ with tab_debt:
     sim_df, _ = run_sim(fingerprint, date.today(), 60)
     ev = sim_df.explode("cc_events", ignore_index=True)
     if "cc_events" in ev.columns and ev["cc_events"].notna().any():
-        base = ev.loc(ev["cc_events"].notna(), ["date", "cc_events"]].reset_index(drop=True)
+        base = ev.loc[ev["cc_events"].notna(), ["date", "cc_events"]].reset_index(drop=True)
         events_df = pd.json_normalize(base["cc_events"]).reset_index(drop=True)
         if "date" in events_df.columns:
             events_df = events_df.rename(columns={"date": "event_date"})
@@ -2350,295 +2649,6 @@ with tab_wishlist:
             st.error(str(e))
 </file>
 
-<file path="src/cashsim/utils/date_utils.py">
-from __future__ import annotations
-
-import calendar
-from datetime import date
-from functools import lru_cache
-
-from dateutil.relativedelta import relativedelta
-
-from cashsim.constants import CARD_ACT_MIN_DAYS
-
-
-def clamp_day(year: int, month: int, day: int) -> int:
-    last = calendar.monthrange(year, month)[1]
-    return min(day, last)
-
-
-def next_due_date(today: date, usual_day: int) -> date:
-    cand = date(today.year, today.month, clamp_day(today.year, today.month, usual_day))
-    if cand >= today:
-        return cand
-    nxt = today + relativedelta(months=+1)
-    return date(nxt.year, nxt.month, clamp_day(nxt.year, nxt.month, usual_day))
-
-
-@lru_cache(maxsize=4096)
-def next_due_date_cached(today: date, usual_day: int) -> date:
-    """LRU-cached wrapper; safe because inputs are hashable and function is pure."""
-    return next_due_date(today, usual_day)
-
-
-def prior_statement_day(due_day: int) -> int:
-    return max(1, due_day - CARD_ACT_MIN_DAYS)
-
-
-def next_statement_close_date(today: date, due_day: int, statement_day: int | None) -> date:
-    sd = statement_day or prior_statement_day(due_day)
-    cand = date(today.year, today.month, clamp_day(today.year, today.month, sd))
-    if cand >= today:
-        return cand
-    nxt = today + relativedelta(months=+1)
-    return date(nxt.year, nxt.month, clamp_day(nxt.year, nxt.month, sd))
-
-
-def last_statement_close_date(today: date, due_day: int, statement_day: int | None) -> date:
-    ns = next_statement_close_date(today, due_day, statement_day)
-    if ns > today:
-        from_prev = ns + relativedelta(months=-1)
-        sd = statement_day or prior_statement_day(due_day)
-        return date(from_prev.year, from_prev.month, clamp_day(from_prev.year, from_prev.month, sd))
-    return ns
-</file>
-
-<file path="src/cashsim/utils/money.py">
-from __future__ import annotations
-
-from decimal import Decimal, ROUND_HALF_UP
-
-CENT = Decimal("0.01")
-
-
-def to_cents(x: float | str) -> int:
-    """Convert a float/str dollar amount to integer cents (half-up)."""
-    return int((Decimal(str(x)).quantize(CENT, rounding=ROUND_HALF_UP) * 100))
-
-
-def from_cents(c: int) -> float:
-    """Convert integer cents back to a float dollars representation."""
-    return float(Decimal(c) / 100)
-
-
-def round_cents(x: float | str | Decimal) -> float:
-    """Round a dollar amount to 2 decimals (half-up) and return float."""
-    return float(Decimal(str(x)).quantize(CENT, rounding=ROUND_HALF_UP))
-</file>
-
-<file path="src/cashsim/__init__.py">
-from .models import Bill, CreditCard, IOU, OneOff, InvestmentSettings, Dials
-from .sim.core import simulate_month
-from .sim.types import SimMetrics
-from .analytics.break_even import break_even_grid
-from .analytics.snapshot import monthly_snapshot
-
-__all__ = [
-    "Bill",
-    "CreditCard",
-    "IOU",
-    "OneOff",
-    "InvestmentSettings",
-    "Dials",
-    "simulate_month",
-    "SimMetrics",
-    "break_even_grid",
-    "monthly_snapshot",
-]
-</file>
-
-<file path="src/cashsim/constants.py">
-from __future__ import annotations
-
-DAYS_PER_YEAR = 365
-CARD_ACT_MIN_DAYS = 21  # typical minimum days between statement close and due date
-</file>
-
-<file path="src/cashsim/models.py">
-from __future__ import annotations
-
-from datetime import date
-from typing import Literal, Optional
-
-from pydantic import BaseModel, Field, field_validator
-
-
-class Bill(BaseModel):
-    name: str = Field(min_length=1)
-    usual_day: int = Field(ge=1, le=31)
-    amount: float = Field(ge=0)
-
-    @field_validator("amount")
-    @classmethod
-    def two_decimals(cls, v: float) -> float:
-        return round(float(v), 2)
-
-
-class CreditCard(BaseModel):
-    name: str = Field(min_length=1)
-    apr: float = Field(ge=0, description="APR as decimal, e.g. 0.2499 for 24.99%")
-    balance: float = Field(ge=0)
-    due_day: int = Field(ge=1, le=31, description="Payment due day")
-    min_pct: float = Field(ge=0, le=1, description="e.g. 0.02 for 2%")
-    min_floor: float = Field(ge=0, description="absolute floor, e.g. $25")
-    statement_day: Optional[int] = Field(
-        default=None,
-        ge=1,
-        le=31,
-        description="If None, we approximate as due_day-21 (CARD Act minimum).",
-    )
-
-
-class IOU(BaseModel):
-    name: str = Field(min_length=1)
-    balance: float = Field(ge=0)
-    apr: float = Field(ge=0, description="APR decimal; 0.0 if no interest")
-    due_day: Optional[int] = Field(default=None, ge=1, le=31)
-    min_pct: float = Field(default=0.0, ge=0, le=1)
-    min_floor: float = Field(default=0.0, ge=0)
-
-
-class OneOff(BaseModel):
-    name: str = Field(min_length=1)
-    due_date: date
-    amount: float = Field(ge=0)
-    priority: int = 0  # higher = fund sooner
-    must_pay: bool = True
-
-    @field_validator("amount")
-    @classmethod
-    def two_decimals(cls, v: float) -> float:
-        return round(float(v), 2)
-
-
-class InvestmentSettings(BaseModel):
-    enable: bool = True
-    hysa_apy: float = Field(ge=0, default=0.045)
-    expected_market_return: float = Field(ge=0, default=0.07)
-    use_dca: bool = True
-    roth_target: float = Field(ge=0, default=0.0)
-    trad_target: float = Field(ge=0, default=0.0)
-    hysa_target: float = Field(ge=0, default=0.0)
-    robinhood_target: float = Field(ge=0, default=0.0)
-    ira_year_limit: float = Field(ge=0, default=7000.0)
-    roth_ok_today: bool = True
-
-
-class Dials(BaseModel):
-    current_cash: float = Field(ge=0)
-    safety_cushion: float = Field(ge=0)
-    weekday_earnings: float = Field(ge=0, description="Treated as DAILY earnings (7d/wk)")
-    gas_pct: float = Field(ge=0, le=1)
-    gas_fill_size: float = Field(gt=0)
-    bills: list[Bill]
-    credit_cards: list[CreditCard] = []
-    ious: list[IOU] = []
-    oneoffs: list[OneOff] = []
-    invest: InvestmentSettings = InvestmentSettings()
-    interest_mode: Literal["statement_adb", "due_simple"] = "statement_adb"
-    extra_strategy: Literal["avalanche", "snowball"] = "avalanche"
-    # 👇 NEW: dates you cannot drive (earnings forced to 0 on these days in the planner)
-    blackouts: list[date] = []
-</file>
-
-<file path=".repomixignore">
-# Add patterns to ignore here, one per line
-# Example:
-# *.log
-# tmp/
-.streamlit/secrets.toml
-</file>
-
-<file path="pyrightconfig.json">
-{
-  "typeCheckingMode": "basic",
-  "venv": ".venv",
-  "exclude": ["**/.venv/**", "**/.git/**", "**/__pycache__/**"],
-  "reportUnknownParameterType": "error",
-  "reportUnknownArgumentType": "error",
-  "reportUnknownMemberType": "error",
-  "reportUnknownVariableType": "error",
-  "reportUnknownLambdaType": "error",
-  "executionEnvironments": [
-    { "root": "src" }
-  ]
-}
-</file>
-
-<file path="README.md">
-# CashSim
-
-Streamlit cash flow simulator.
-</file>
-
-<file path="repomix.config.json">
-{
-  "$schema": "https://repomix.com/schemas/latest/schema.json",
-  "input": {
-    "maxFileSize": 52428800
-  },
-  "output": {
-    "filePath": "repomix-output.xml",
-    "style": "xml",
-    "parsableStyle": false,
-    "fileSummary": true,
-    "directoryStructure": true,
-    "files": true,
-    "removeComments": false,
-    "removeEmptyLines": false,
-    "compress": false,
-    "topFilesLength": 5,
-    "showLineNumbers": false,
-    "truncateBase64": false,
-    "copyToClipboard": false,
-    "tokenCountTree": false,
-    "git": {
-      "sortByChanges": true,
-      "sortByChangesMaxCommits": 100,
-      "includeDiffs": false,
-      "includeLogs": false,
-      "includeLogsCount": 50
-    }
-  },
-  "include": [],
-  "ignore": {
-    "useGitignore": true,
-    "useDefaultPatterns": true,
-    "customPatterns": []
-  },
-  "security": {
-    "enableSecurityCheck": true
-  },
-  "tokenCount": {
-    "encoding": "o200k_base"
-  }
-}
-</file>
-
-<file path="src/cashsim/main.py">
-# src/cashsim/__main__.py
-"""
-Executable entry-point for the 'cashsim' CLI.
-
-This makes the pyproject script mapping
-    cashsim = "cashsim.__main__:main"
-work correctly, and also supports:
-    python -m cashsim
-"""
-
-from .main import main as _main
-
-
-def main() -> None:
-    """Delegate to the real CLI implementation in cashsim.main:main()."""
-    _main()
-
-
-if __name__ == "__main__":
-    # Supports: python -m cashsim
-    main()
-</file>
-
 <file path=".gitignore">
 config.json
 bobbie_config.json
@@ -2681,7 +2691,7 @@ dev = [
 ]
 
 [project.scripts]
-cashsim = "cashsim.main:main"
+cashsim = "cashsim.cli:main"
 
 [tool.ruff]
 line-length = 100

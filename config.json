@@ -1,7 +1,7 @@
 {
   "current_cash": 178.0,
-  "safety_cushion": 100.0,
-  "weekday_earnings": 100.0,
+  "safety_cushion": 2511,
+  "weekday_earnings": 30,
   "gas_pct": 0.185,
   "gas_fill_size": 25.0,
   "bills": [
@@ -26,9 +26,9 @@
       "amount": 11
     },
     {
-      "name": "Statefarm - Kate's Half",
+      "name": "Plymouth Rock Assurance",
       "usual_day": 13,
-      "amount": 145.0
+      "amount": 261.0
     },
     {
       "name": "ChatGPT",
@@ -133,7 +133,7 @@
   "ious": [
     {
       "name": "Mama",
-      "balance": 1050.0,
+      "balance": 1850.0,
       "apr": 0.0,
       "due_day": null,
       "min_pct": 0.0,
@@ -165,13 +165,6 @@
   ],
   "oneoffs": [
     {
-      "name": "Auto Repair Service",
-      "due_date": "2025-09-30",
-      "amount": 521.0,
-      "priority": 2,
-      "must_pay": true
-    },
-    {
       "name": "MA Annual Inspection Sticker",
       "due_date": "2025-11-05",
       "amount": 35.0,
@@ -192,16 +185,16 @@
       "priority": 1,
       "must_pay": true
     },{
-      "name": "Car Key Copy for Bobbie",
-      "due_date": "2025-11-29",
-      "amount": 130.0,
-      "priority": 3,
-      "must_pay": false
-    },{
       "name": "Auto Insurance Down Payment",
       "due_date": "2025-10-23",
       "amount": 500.0,
       "priority": 1,
+      "must_pay": true
+    },{
+      "name": "Rent",
+      "due_date": "2025-10-31",
+      "amount": 350.0,
+      "priority": 2,
       "must_pay": true
     }
   ],

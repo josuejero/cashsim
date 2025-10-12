@@ -34,7 +34,7 @@ dev = [
 ]
 
 [project.scripts]
-cashsim = "cashsim.main:main"
+cashsim = "cashsim.cli:main"
 
 [tool.ruff]
 line-length = 100

@@ -237,7 +237,7 @@ with tab_debt:
     sim_df, _ = run_sim(fingerprint, date.today(), 60)
     ev = sim_df.explode("cc_events", ignore_index=True)
     if "cc_events" in ev.columns and ev["cc_events"].notna().any():
-        base = ev.loc(ev["cc_events"].notna(), ["date", "cc_events"]].reset_index(drop=True)
+        base = ev.loc[ev["cc_events"].notna(), ["date", "cc_events"]].reset_index(drop=True)
         events_df = pd.json_normalize(base["cc_events"]).reset_index(drop=True)
         if "date" in events_df.columns:
             events_df = events_df.rename(columns={"date": "event_date"})

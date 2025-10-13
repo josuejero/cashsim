@@ -36,7 +36,9 @@ dev = [
 ,
   "pandas-stubs"
 ,
-  "MonkeyType"
+  "MonkeyType",
+  "pre-commit",
+  "bandit"
 ]
 
 [project.scripts]

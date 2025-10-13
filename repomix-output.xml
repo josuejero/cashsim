@@ -341,12 +341,436 @@ client_x509_cert_url = "https://www.googleapis.com/robot/v1/metadata/x509/svc-ac
 }
 </file>
 
+<file path="src/cashsim/io/__init__.py">
+from __future__ import annotations
+</file>
+
+<file path="src/cashsim/io/config_io.py">
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from pydantic import ValidationError
+
+from cashsim.models import Dials
+
+
+def load_config(path: str | Path) -> Dials:
+    p = Path(path)
+    data = json.loads(p.read_text(encoding="utf-8"))
+    try:
+        return Dials.model_validate(data)
+    except ValidationError as e:
+        raise ValueError(f"Invalid config: {e}") from e
+
+
+def save_config(dials: Dials, path: str | Path) -> None:
+    p = Path(path)
+    p.write_text(dials.model_dump_json(indent=2), encoding="utf-8")
+</file>
+
+<file path="src/cashsim/sim/gas.py">
+from __future__ import annotations
+
+
+def apply_gas_skim_and_fillups(
+    balance: float,
+    gas_bucket: float,
+    daily_earn: float,
+    gas_pct: float,
+    fill_size: float,
+) -> tuple[float, float, int]:
+    """
+    Skim daily gas, accumulate bucket, execute fill-ups (withdraw from balance).
+    O(1) arithmetic version (no loop). Returns (new_balance, new_gas_bucket, fillups_count).
+    """
+    gas_skim = daily_earn * gas_pct
+    new_bucket = gas_bucket + gas_skim
+
+    # How many discrete fillups were triggered today?
+    fills_before = int(gas_bucket // fill_size)
+    fills_after = int(new_bucket // fill_size)
+    fills = max(0, fills_after - fills_before)
+
+    # Apply fillups and finish the day
+    balance -= fills * fill_size
+    gas_bucket = new_bucket - fills * fill_size
+    balance += daily_earn - gas_skim
+    return round(balance, 2), round(gas_bucket, 2), fills
+
+
+def predict_fill_cost_7d(
+    gas_bucket: float, daily_earn: float, gas_pct: float, fill_size: float
+) -> float:
+    """
+    Conservative predictor for gas spend within 7 days:
+    count how many fillups will be triggered by 7 days worth of skims.
+    """
+    if fill_size <= 0:
+        return 0.0
+    added = 7.0 * daily_earn * gas_pct
+    start_fills = int(gas_bucket // fill_size)
+    end_fills = int((gas_bucket + added) // fill_size)
+    new_fills = max(0, end_fills - start_fills)
+    return round(new_fills * fill_size, 2)
+</file>
+
+<file path="src/cashsim/sim/roll.py">
+from __future__ import annotations
+
+from datetime import date
+
+from cashsim.models import Bill
+from cashsim.utils.date_utils import next_due_date_cached as next_due_date
+
+
+def roll_bills(today: date, bills: list[Bill]) -> list[tuple[Bill, date]]:
+    rolled = []
+    for b in bills:
+        d = next_due_date(today, b.usual_day)
+        rolled.append((b, d))
+    rolled.sort(key=lambda t: t[1])
+    return rolled
+
+
+def sum_non_debt_bills_due_today(day: date, bills: list[Bill]) -> float:
+    total = 0.0
+    for b in bills:
+        if next_due_date(day, b.usual_day) == day:
+            total += b.amount
+    return round(total, 2)
+</file>
+
+<file path="src/cashsim/ui/components.py">
+from __future__ import annotations
+
+import pandas as pd
+import streamlit as st
+
+
+def number_dials():
+    col1, col2 = st.columns(2)
+    col1.number_input("current cash", min_value=0.0, step=50.0, key="current_cash")
+    col2.number_input("safety cushion", min_value=0.0, step=25.0, key="safety_cushion")
+    col3, col4 = st.columns(2)
+    col3.number_input("daily earnings", min_value=0.0, step=10.0, key="weekday_earnings")
+    col4.number_input(
+        "gas % of earnings (0-1)", min_value=0.0, max_value=1.0, step=0.05, key="gas_pct"
+    )
+    st.number_input("gas fill-up size", min_value=1.0, step=1.0, key="gas_fill_size")
+
+
+def strategy_toggles():
+    st.selectbox(
+        "Interest calculation",
+        ["statement_adb", "due_simple"],
+        key="interest_mode",
+        help="ADB posts at statement close; 'due_simple' posts on due date.",
+    )
+    st.selectbox(
+        "Extra payment strategy",
+        ["avalanche", "snowball"],
+        key="extra_strategy",
+        help="Avalanche = highest APR first; Snowball = smallest balance first.",
+    )
+
+
+def bills_editor(df: pd.DataFrame, key="bill_editor") -> pd.DataFrame:
+    return st.data_editor(
+        df,
+        num_rows="dynamic",
+        width="stretch",
+        column_config={
+            "name": st.column_config.TextColumn("name"),
+            "usual_day": st.column_config.NumberColumn(
+                "usual day (1-31)", min_value=1, max_value=31
+            ),
+            "amount": st.column_config.NumberColumn("amount", min_value=0.0, step=1.0),
+        },
+        key=key,
+    )
+
+
+def cc_editor(df: pd.DataFrame, key="cc_editor") -> pd.DataFrame:
+    return st.data_editor(
+        df,
+        num_rows="dynamic",
+        width="stretch",
+        column_config={
+            "name": st.column_config.TextColumn("name"),
+            "apr": st.column_config.NumberColumn(
+                "APR (decimal)", min_value=0.0, max_value=1.0, step=0.0001
+            ),
+            "balance": st.column_config.NumberColumn("balance", min_value=0.0, step=1.0),
+            "due_day": st.column_config.NumberColumn("due day (1-31)", min_value=1, max_value=31),
+            "min_pct": st.column_config.NumberColumn(
+                "min % (0-1)", min_value=0.0, max_value=1.0, step=0.001
+            ),
+            "min_floor": st.column_config.NumberColumn("min floor", min_value=0.0, step=1.0),
+            "statement_day": st.column_config.NumberColumn(
+                "statement day (opt)", min_value=1, max_value=31
+            ),
+        },
+        key=key,
+    )
+
+
+def iou_editor(df: pd.DataFrame, key="iou_editor") -> pd.DataFrame:
+    return st.data_editor(
+        df,
+        num_rows="dynamic",
+        width="stretch",
+        column_config={
+            "name": st.column_config.TextColumn("name"),
+            "balance": st.column_config.NumberColumn("balance", min_value=0.0, step=1.0),
+            "apr": st.column_config.NumberColumn(
+                "APR (decimal)", min_value=0.0, max_value=1.0, step=0.0001
+            ),
+            "due_day": st.column_config.NumberColumn("due day (opt)", min_value=1, max_value=31),
+            "min_pct": st.column_config.NumberColumn(
+                "min % (0-1)", min_value=0.0, max_value=1.0, step=0.001
+            ),
+            "min_floor": st.column_config.NumberColumn("min floor", min_value=0.0, step=1.0),
+        },
+        key=key,
+    )
+
+
+def oneoff_editor(df: pd.DataFrame, key="oneoff_editor") -> pd.DataFrame:
+    return st.data_editor(
+        df,
+        num_rows="dynamic",
+        width="stretch",
+        column_config={
+            "name": st.column_config.TextColumn("name"),
+            "due_date": st.column_config.DateColumn("due date"),
+            "amount": st.column_config.NumberColumn("amount", min_value=0.0, step=1.0),
+            "priority": st.column_config.NumberColumn(
+                "priority (higher=faster)", min_value=0, max_value=99, step=1
+            ),
+            "must_pay": st.column_config.CheckboxColumn("must pay?"),
+        },
+        key=key,
+    )
+</file>
+
+<file path="src/cashsim/ui/formatters.py">
+from __future__ import annotations
+
+import pandas as pd
+
+
+def stringify_events_columns(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+
+    def _fmt_pair_list(v):
+        if isinstance(v, (list, tuple)) and len(v) > 0:
+            try:
+                return "; ".join(f"{name}: ${amt:,.2f}" for (name, amt) in v)
+            except Exception:
+                return str(v)
+        return "" if v is None or (isinstance(v, float) and pd.isna(v)) else str(v)
+
+    for col in [
+        "cc_extra_on_due",
+        "cc_interest_posted",
+        "cc_min_paid",
+        "oneoff_contribs",
+        "oneoff_paid",
+    ]:
+        if col in out.columns:
+            out[col] = out[col].apply(_fmt_pair_list)
+    return out
+</file>
+
+<file path="src/cashsim/utils/date_utils.py">
+from __future__ import annotations
+
+import calendar
+from datetime import date
+from functools import lru_cache
+
+from dateutil.relativedelta import relativedelta
+
+from cashsim.constants import CARD_ACT_MIN_DAYS
+
+
+def clamp_day(year: int, month: int, day: int) -> int:
+    last = calendar.monthrange(year, month)[1]
+    return min(day, last)
+
+
+def next_due_date(today: date, usual_day: int) -> date:
+    cand = date(today.year, today.month, clamp_day(today.year, today.month, usual_day))
+    if cand >= today:
+        return cand
+    nxt = today + relativedelta(months=+1)
+    return date(nxt.year, nxt.month, clamp_day(nxt.year, nxt.month, usual_day))
+
+
+@lru_cache(maxsize=4096)
+def next_due_date_cached(today: date, usual_day: int) -> date:
+    """LRU-cached wrapper; safe because inputs are hashable and function is pure."""
+    return next_due_date(today, usual_day)
+
+
+def prior_statement_day(due_day: int) -> int:
+    return max(1, due_day - CARD_ACT_MIN_DAYS)
+
+
+def next_statement_close_date(today: date, due_day: int, statement_day: int | None) -> date:
+    sd = statement_day or prior_statement_day(due_day)
+    cand = date(today.year, today.month, clamp_day(today.year, today.month, sd))
+    if cand >= today:
+        return cand
+    nxt = today + relativedelta(months=+1)
+    return date(nxt.year, nxt.month, clamp_day(nxt.year, nxt.month, sd))
+
+
+def last_statement_close_date(today: date, due_day: int, statement_day: int | None) -> date:
+    ns = next_statement_close_date(today, due_day, statement_day)
+    if ns > today:
+        from_prev = ns + relativedelta(months=-1)
+        sd = statement_day or prior_statement_day(due_day)
+        return date(from_prev.year, from_prev.month, clamp_day(from_prev.year, from_prev.month, sd))
+    return ns
+</file>
+
+<file path="src/cashsim/constants.py">
+from __future__ import annotations
+
+DAYS_PER_YEAR = 365
+CARD_ACT_MIN_DAYS = 21  # typical minimum days between statement close and due date
+</file>
+
+<file path=".repomixignore">
+# Add patterns to ignore here, one per line
+# Example:
+# *.log
+# tmp/
+.streamlit/secrets.toml
+</file>
+
+<file path="patch.diff">
+*** Begin Patch
+*** Update File: src/cashsim/utils/money.py
+@@
+-from __future__ import annotations
+-
+-from decimal import Decimal, ROUND_HALF_UP
+-
+-CENT = Decimal("0.01")
+-
+-
+-def to_cents(x: float | str) -> int:
+-    """Convert a float/str dollar amount to integer cents (half-up)."""
+-    return int((Decimal(str(x)).quantize(CENT, rounding=ROUND_HALF_UP) * 100))
+-
+-
+-def from_cents(c: int) -> float:
+-    """Convert integer cents back to a float dollars representation."""
+-    return float(Decimal(c) / 100)
+-
+-
+-def round_cents(x: float | str | Decimal) -> float:
+-    """Round a dollar amount to 2 decimals (half-up) and return float."""
+-    return float(Decimal(str(x)).quantize(CENT, rounding=ROUND_HALF_UP))
++from __future__ import annotations
++
++from decimal import Decimal, ROUND_HALF_UP, ROUND_HALF_EVEN
++
++# Always define a single "cent" quantum for money rounding.
++CENT = Decimal("0.01")
++
++def D(x: float | int | str | Decimal) -> Decimal:
++    """Safe Decimal constructor (avoid binary float artifacts)."""
++    return x if isinstance(x, Decimal) else Decimal(str(x))
++
++def quantize_cents(x: Decimal, *, rounding=ROUND_HALF_UP) -> Decimal:
++    """Quantize a Decimal to cents with an explicit rounding mode."""
++    return D(x).quantize(CENT, rounding=rounding)
++
++def to_cents(x: float | str | Decimal) -> int:
++    """
++    Convert a dollar amount to integer cents using HALF_UP.
++    Use only at I/O boundaries (storage, display, external APIs).
++    """
++    return int(quantize_cents(D(x), rounding=ROUND_HALF_UP) * 100)
++
++def from_cents(c: int) -> float:
++    """Convert integer cents back to float dollars representation (display only)."""
++    return float(Decimal(int(c)) / 100)
++
++def round_cents(x: float | str | Decimal) -> float:
++    """
++    Round a dollar amount to two decimals (HALF_UP) and return float.
++    Prefer doing all intermediate arithmetic with Decimal, then call this when
++    you must hand a float to existing models/fields.
++    """
++    return float(quantize_cents(D(x), rounding=ROUND_HALF_UP))
+*** End Patch
+</file>
+
+<file path="README.md">
+# CashSim
+
+Streamlit cash flow simulator.
+</file>
+
+<file path="repomix.config.json">
+{
+  "$schema": "https://repomix.com/schemas/latest/schema.json",
+  "input": {
+    "maxFileSize": 52428800
+  },
+  "output": {
+    "filePath": "repomix-output.xml",
+    "style": "xml",
+    "parsableStyle": false,
+    "fileSummary": true,
+    "directoryStructure": true,
+    "files": true,
+    "removeComments": false,
+    "removeEmptyLines": false,
+    "compress": false,
+    "topFilesLength": 5,
+    "showLineNumbers": false,
+    "truncateBase64": false,
+    "copyToClipboard": false,
+    "tokenCountTree": false,
+    "git": {
+      "sortByChanges": true,
+      "sortByChangesMaxCommits": 100,
+      "includeDiffs": false,
+      "includeLogs": false,
+      "includeLogsCount": 50
+    }
+  },
+  "include": [],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": []
+  },
+  "security": {
+    "enableSecurityCheck": true
+  },
+  "tokenCount": {
+    "encoding": "o200k_base"
+  }
+}
+</file>
+
 <file path="src/cashsim/analytics/break_even.py">
 from __future__ import annotations
+
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date
-from typing import Iterable
+
 import pandas as pd
+
 from cashsim.models import Dials
 from cashsim.sim.core import simulate_month
 
@@ -390,10 +814,10 @@ def break_even_grid(dials: Dials, candidates: Iterable[float], *, days: int = 31
 from __future__ import annotations
 
 from datetime import date
+from typing import Any, TypedDict
 
 import pandas as pd
 
-from typing import TypedDict, Any, Dict
 from cashsim.models import Dials
 
 
@@ -406,7 +830,7 @@ class Snapshot(TypedDict):
     leftover: float
 
 
-def monthly_snapshot(dials: "Dials", months: int = 1) -> Snapshot:
+def monthly_snapshot(dials: Dials, months: int = 1) -> Snapshot:
     """Daily earnings semantics: 7d/week."""
     months = max(1, min(6, int(months)))
     today = date.today()
@@ -448,43 +872,17 @@ def monthly_snapshot(dials: "Dials", months: int = 1) -> Snapshot:
     return result
 </file>
 
-<file path="src/cashsim/io/__init__.py">
-from __future__ import annotations
-</file>
-
-<file path="src/cashsim/io/config_io.py">
-from __future__ import annotations
-
-import json
-from pathlib import Path
-
-from pydantic import ValidationError
-
-from cashsim.models import Dials
-
-
-def load_config(path: str | Path) -> Dials:
-    p = Path(path)
-    data = json.loads(p.read_text(encoding="utf-8"))
-    try:
-        return Dials.model_validate(data)
-    except ValidationError as e:
-        raise ValueError(f"Invalid config: {e}") from e
-
-
-def save_config(dials: Dials, path: str | Path) -> None:
-    p = Path(path)
-    p.write_text(dials.model_dump_json(indent=2), encoding="utf-8")
-</file>
-
 <file path="src/cashsim/io/gsheets.py">
 from __future__ import annotations
-from typing import Dict
-import pandas as pd
+
+from collections.abc import Mapping
+from typing import Any
+
 import gspread
-from google.oauth2 import service_account
-from gspread_dataframe import get_as_dataframe
+import pandas as pd
 import streamlit as st
+from google.oauth2 import service_account
+from gspread_dataframe import get_as_dataframe  # type: ignore[reportMissingTypeStubs]
 
 SHEETS_READONLY = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 
@@ -531,17 +929,17 @@ def gs_client(sa_info: dict):
 <file path="src/cashsim/planning/planner.py">
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, timedelta
-from typing import List, Optional, Literal, Iterable, Set
+from typing import Literal
 
-from cashsim.models import Bill, CreditCard, IOU, OneOff, Dials
+from cashsim.models import IOU, Bill, CreditCard, Dials, OneOff
 from cashsim.sim.core import simulate_month
 from cashsim.sim.gas import apply_gas_skim_and_fillups
-from cashsim.sim.roll import sum_non_debt_bills_due_today
 from cashsim.sim.reserve import reserve_next_7_days
+from cashsim.sim.roll import sum_non_debt_bills_due_today
 from cashsim.utils.date_utils import next_due_date_cached as next_due_date
-
 
 # ---------------------------
 # Existing constant-target planner
@@ -624,7 +1022,7 @@ class DailyPlanResult:
     ok: bool  # False if any day needed > daily_cap (when provided)
     min_balance: float
     min_balance_date: date | None
-    rows: List[DailyPlanRow]
+    rows: list[DailyPlanRow]
 
 
 def _cc_mins_due_today(day: date, cards: list[CreditCard]) -> float:
@@ -697,9 +1095,9 @@ def plan_variable_daily_earnings(
     start: date | None = None,
     days: int = 60,
     safety_target: Literal["zero", "cushion"] = "zero",
-    daily_cap: Optional[float] = None,
-    future_daily_hint: Optional[float] = None,
-    blackout_dates: Optional[Iterable[date]] = None,
+    daily_cap: float | None = None,
+    future_daily_hint: float | None = None,
+    blackout_dates: Iterable[date] | None = None,
     tol: float = 0.01,
 ) -> DailyPlanResult:
     """
@@ -733,7 +1131,7 @@ def plan_variable_daily_earnings(
     min_balance_date: date | None = start
     ok = True
 
-    blackout_set: Set[date] = set(blackout_dates or [])
+    blackout_set: set[date] = set(blackout_dates or [])
 
     for i in range(days):
         day = start + timedelta(days=i)
@@ -894,7 +1292,7 @@ def plan_variable_daily_earnings(
 
 
 def constant_target_from_schedule(
-    rows: List[DailyPlanRow], blackout_dates: Iterable[date]
+    rows: list[DailyPlanRow], blackout_dates: Iterable[date]
 ) -> float:
     """Return a safe constant target to hit on working days (max earn_required on non-blackout days)."""
     bset = set(blackout_dates or [])
@@ -907,16 +1305,18 @@ from __future__ import annotations
 
 import re
 from datetime import date, timedelta
-from typing import Dict, List, Tuple
 
 import pandas as pd
 
-from cashsim.models import Bill, CreditCard, Dials, IOU, OneOff
+from cashsim.models import IOU, Bill, CreditCard, Dials, OneOff
 from cashsim.utils.date_utils import (
     last_statement_close_date,
-    next_due_date_cached as next_due_date,
     next_statement_close_date,
 )
+from cashsim.utils.date_utils import (
+    next_due_date_cached as next_due_date,
+)
+
 from .events import add_extra_event, add_finance_event, add_min_event
 from .gas import apply_gas_skim_and_fillups
 from .interest import (
@@ -938,13 +1338,13 @@ def simulate_month(
 ) -> tuple[pd.DataFrame, SimMetrics]:
     start = start or date.today()
 
-    bills: List[Bill] = list(dials.bills)
-    cards: List[CreditCard] = [CreditCard(**c.model_dump()) for c in dials.credit_cards]
-    ious: List[IOU] = [IOU(**x.model_dump()) for x in dials.ious]
-    oneoffs: List[OneOff] = [OneOff(**o.model_dump()) for o in getattr(dials, "oneoffs", [])]
+    bills: list[Bill] = list(dials.bills)
+    cards: list[CreditCard] = [CreditCard(**c.model_dump()) for c in dials.credit_cards]
+    ious: list[IOU] = [IOU(**x.model_dump()) for x in dials.ious]
+    oneoffs: list[OneOff] = [OneOff(**o.model_dump()) for o in getattr(dials, "oneoffs", [])]
 
     # per-card state
-    card_state: Dict[str, Dict] = {}
+    card_state: dict[str, dict] = {}
     for c in cards:
         cycle_start = last_statement_close_date(start, c.due_day, c.statement_day)
         next_stmt = next_statement_close_date(start, c.due_day, c.statement_day)
@@ -962,10 +1362,10 @@ def simulate_month(
             "unposted_interest_est": 0.0,
         }
 
-    oneoff_saved: Dict[str, float] = {o.name: 0.0 for o in oneoffs}
-    oneoff_paid: Dict[str, bool] = {o.name: False for o in oneoffs}
+    oneoff_saved: dict[str, float] = {o.name: 0.0 for o in oneoffs}
+    oneoff_paid: dict[str, bool] = {o.name: False for o in oneoffs}
 
-    records: List[dict] = []
+    records: list[dict] = []
     gas_bucket = 0.0
     balance = float(dials.current_cash)
     min_balance = balance
@@ -978,7 +1378,7 @@ def simulate_month(
     paid_iou_mins = 0.0
     paid_oneoffs_total = 0.0
 
-    last_interest_post_simple: Dict[str, date] = {c.name: start for c in cards}
+    last_interest_post_simple: dict[str, date] = {c.name: start for c in cards}
 
     for i in range(days):
         day = start + timedelta(days=i)
@@ -996,7 +1396,7 @@ def simulate_month(
             paid_non_debt_bills += bill_due_today
 
         # ---------- one-off contributions from surplus ----------
-        oneoff_contrib_events: List[Tuple[str, float]] = []
+        oneoff_contrib_events: list[tuple[str, float]] = []
         total_now, _, _, gas_pred_now = reserve_next_7_days(
             day,
             bills=bills,
@@ -1031,7 +1431,7 @@ def simulate_month(
                 oneoff_contrib_events.append((o.name, contrib))
 
         # ---------- pay one-offs on due date ----------
-        oneoff_paid_events: List[Tuple[str, float]] = []
+        oneoff_paid_events: list[tuple[str, float]] = []
         for o in oneoffs:
             if (not oneoff_paid[o.name]) and (day == o.due_date):
                 use_saved = min(oneoff_saved[o.name], o.amount)
@@ -1044,10 +1444,10 @@ def simulate_month(
                 paid_oneoffs_total = round(paid_oneoffs_total + o.amount, 2)
 
         # ---------- cards ----------
-        interest_events: List[Tuple[str, float]] = []
-        minpay_events: List[Tuple[str, float]] = []
-        extra_on_due_events: List[Tuple[str, float]] = []
-        unified_events: List[dict] = []
+        interest_events: list[tuple[str, float]] = []
+        minpay_events: list[tuple[str, float]] = []
+        extra_on_due_events: list[tuple[str, float]] = []
+        unified_events: list[dict] = []
 
         if dials.interest_mode == "statement_adb":
             accrue_adb_daily(card_state, cards)
@@ -1227,11 +1627,10 @@ def simulate_month(
 from __future__ import annotations
 
 from datetime import date
-from typing import Dict, List, Tuple
 
 
 def add_finance_event(
-    events: List[dict], day: date, account: str, amt: float, new_balance: float
+    events: list[dict], day: date, account: str, amt: float, new_balance: float
 ) -> None:
     events.append(
         {
@@ -1246,7 +1645,7 @@ def add_finance_event(
 
 
 def add_min_event(
-    events: List[dict], day: date, account: str, amt: float, new_balance: float
+    events: list[dict], day: date, account: str, amt: float, new_balance: float
 ) -> None:
     events.append(
         {
@@ -1261,7 +1660,7 @@ def add_min_event(
 
 
 def add_extra_event(
-    events: List[dict],
+    events: list[dict],
     day: date,
     account: str,
     extra: float,
@@ -1290,60 +1689,14 @@ def add_extra_event(
     )
 </file>
 
-<file path="src/cashsim/sim/gas.py">
-from __future__ import annotations
-
-
-def apply_gas_skim_and_fillups(
-    balance: float,
-    gas_bucket: float,
-    daily_earn: float,
-    gas_pct: float,
-    fill_size: float,
-) -> tuple[float, float, int]:
-    """
-    Skim daily gas, accumulate bucket, execute fill-ups (withdraw from balance).
-    O(1) arithmetic version (no loop). Returns (new_balance, new_gas_bucket, fillups_count).
-    """
-    gas_skim = daily_earn * gas_pct
-    new_bucket = gas_bucket + gas_skim
-
-    # How many discrete fillups were triggered today?
-    fills_before = int(gas_bucket // fill_size)
-    fills_after = int(new_bucket // fill_size)
-    fills = max(0, fills_after - fills_before)
-
-    # Apply fillups and finish the day
-    balance -= fills * fill_size
-    gas_bucket = new_bucket - fills * fill_size
-    balance += daily_earn - gas_skim
-    return round(balance, 2), round(gas_bucket, 2), fills
-
-
-def predict_fill_cost_7d(
-    gas_bucket: float, daily_earn: float, gas_pct: float, fill_size: float
-) -> float:
-    """
-    Conservative predictor for gas spend within 7 days:
-    count how many fillups will be triggered by 7 days worth of skims.
-    """
-    if fill_size <= 0:
-        return 0.0
-    added = 7.0 * daily_earn * gas_pct
-    start_fills = int(gas_bucket // fill_size)
-    end_fills = int((gas_bucket + added) // fill_size)
-    new_fills = max(0, end_fills - start_fills)
-    return round(new_fills * fill_size, 2)
-</file>
-
 <file path="src/cashsim/sim/reserve.py">
 from __future__ import annotations
 
 from datetime import date, timedelta
-from typing import Dict, Optional, Tuple
 
-from cashsim.models import Bill, CreditCard, IOU, OneOff
+from cashsim.models import IOU, Bill, CreditCard, OneOff
 from cashsim.utils.date_utils import next_due_date_cached as next_due_date
+
 from .gas import predict_fill_cost_7d
 
 
@@ -1355,14 +1708,14 @@ def reserve_next_7_days(
     ious: list[IOU],
     oneoffs: list[OneOff],
     include_today: bool,
-    locked_mins: Optional[Dict[str, float]] = None,
-    locked_due_dates: Optional[Dict[str, date]] = None,
-    oneoff_saved: Optional[Dict[str, float]] = None,
+    locked_mins: dict[str, float] | None = None,
+    locked_due_dates: dict[str, date] | None = None,
+    oneoff_saved: dict[str, float] | None = None,
     gas_bucket: float = 0.0,
     daily_earn: float = 0.0,
     gas_pct: float = 0.0,
     fill_size: float = 1.0,
-) -> Tuple[float, float, float, float]:
+) -> tuple[float, float, float, float]:
     """
     7-day reserve = non-debt bills + CC/IOU minimums + one-off shortfalls + predicted gas fills.
     Returns (total, nondebt, debt_mins, gas_pred).
@@ -1408,32 +1761,6 @@ def reserve_next_7_days(
     return total, round(amt_bills, 2), round(amt_mins, 2), round(gas_pred, 2)
 </file>
 
-<file path="src/cashsim/sim/roll.py">
-from __future__ import annotations
-
-from datetime import date
-
-from cashsim.models import Bill
-from cashsim.utils.date_utils import next_due_date_cached as next_due_date
-
-
-def roll_bills(today: date, bills: list[Bill]) -> list[tuple[Bill, date]]:
-    rolled = []
-    for b in bills:
-        d = next_due_date(today, b.usual_day)
-        rolled.append((b, d))
-    rolled.sort(key=lambda t: t[1])
-    return rolled
-
-
-def sum_non_debt_bills_due_today(day: date, bills: list[Bill]) -> float:
-    total = 0.0
-    for b in bills:
-        if next_due_date(day, b.usual_day) == day:
-            total += b.amount
-    return round(total, 2)
-</file>
-
 <file path="src/cashsim/sim/types_runtime.py">
 from __future__ import annotations
 
@@ -1458,171 +1785,29 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Optional
 
 
 @dataclass
 class SimMetrics:
     min_balance: float
-    min_balance_date: Optional[date]
-    first_negative_date: Optional[date]
+    min_balance_date: date | None
+    first_negative_date: date | None
     total_upcoming_bills: float
     friend_ask_needed: float
-    friend_ask_latest_date: Optional[date]
-    cushion_breach_date: Optional[date]
+    friend_ask_latest_date: date | None
+    cushion_breach_date: date | None
     accrued_interest_estimate: float
-</file>
-
-<file path="src/cashsim/ui/components.py">
-from __future__ import annotations
-
-import pandas as pd
-import streamlit as st
-
-
-def number_dials():
-    col1, col2 = st.columns(2)
-    col1.number_input("current cash", min_value=0.0, step=50.0, key="current_cash")
-    col2.number_input("safety cushion", min_value=0.0, step=25.0, key="safety_cushion")
-    col3, col4 = st.columns(2)
-    col3.number_input("daily earnings", min_value=0.0, step=10.0, key="weekday_earnings")
-    col4.number_input(
-        "gas % of earnings (0-1)", min_value=0.0, max_value=1.0, step=0.05, key="gas_pct"
-    )
-    st.number_input("gas fill-up size", min_value=1.0, step=1.0, key="gas_fill_size")
-
-
-def strategy_toggles():
-    st.selectbox(
-        "Interest calculation",
-        ["statement_adb", "due_simple"],
-        key="interest_mode",
-        help="ADB posts at statement close; 'due_simple' posts on due date.",
-    )
-    st.selectbox(
-        "Extra payment strategy",
-        ["avalanche", "snowball"],
-        key="extra_strategy",
-        help="Avalanche = highest APR first; Snowball = smallest balance first.",
-    )
-
-
-def bills_editor(df: pd.DataFrame, key="bill_editor") -> pd.DataFrame:
-    return st.data_editor(
-        df,
-        num_rows="dynamic",
-        width="stretch",
-        column_config={
-            "name": st.column_config.TextColumn("name"),
-            "usual_day": st.column_config.NumberColumn(
-                "usual day (1-31)", min_value=1, max_value=31
-            ),
-            "amount": st.column_config.NumberColumn("amount", min_value=0.0, step=1.0),
-        },
-        key=key,
-    )
-
-
-def cc_editor(df: pd.DataFrame, key="cc_editor") -> pd.DataFrame:
-    return st.data_editor(
-        df,
-        num_rows="dynamic",
-        width="stretch",
-        column_config={
-            "name": st.column_config.TextColumn("name"),
-            "apr": st.column_config.NumberColumn(
-                "APR (decimal)", min_value=0.0, max_value=1.0, step=0.0001
-            ),
-            "balance": st.column_config.NumberColumn("balance", min_value=0.0, step=1.0),
-            "due_day": st.column_config.NumberColumn("due day (1-31)", min_value=1, max_value=31),
-            "min_pct": st.column_config.NumberColumn(
-                "min % (0-1)", min_value=0.0, max_value=1.0, step=0.001
-            ),
-            "min_floor": st.column_config.NumberColumn("min floor", min_value=0.0, step=1.0),
-            "statement_day": st.column_config.NumberColumn(
-                "statement day (opt)", min_value=1, max_value=31
-            ),
-        },
-        key=key,
-    )
-
-
-def iou_editor(df: pd.DataFrame, key="iou_editor") -> pd.DataFrame:
-    return st.data_editor(
-        df,
-        num_rows="dynamic",
-        width="stretch",
-        column_config={
-            "name": st.column_config.TextColumn("name"),
-            "balance": st.column_config.NumberColumn("balance", min_value=0.0, step=1.0),
-            "apr": st.column_config.NumberColumn(
-                "APR (decimal)", min_value=0.0, max_value=1.0, step=0.0001
-            ),
-            "due_day": st.column_config.NumberColumn("due day (opt)", min_value=1, max_value=31),
-            "min_pct": st.column_config.NumberColumn(
-                "min % (0-1)", min_value=0.0, max_value=1.0, step=0.001
-            ),
-            "min_floor": st.column_config.NumberColumn("min floor", min_value=0.0, step=1.0),
-        },
-        key=key,
-    )
-
-
-def oneoff_editor(df: pd.DataFrame, key="oneoff_editor") -> pd.DataFrame:
-    return st.data_editor(
-        df,
-        num_rows="dynamic",
-        width="stretch",
-        column_config={
-            "name": st.column_config.TextColumn("name"),
-            "due_date": st.column_config.DateColumn("due date"),
-            "amount": st.column_config.NumberColumn("amount", min_value=0.0, step=1.0),
-            "priority": st.column_config.NumberColumn(
-                "priority (higher=faster)", min_value=0, max_value=99, step=1
-            ),
-            "must_pay": st.column_config.CheckboxColumn("must pay?"),
-        },
-        key=key,
-    )
-</file>
-
-<file path="src/cashsim/ui/formatters.py">
-from __future__ import annotations
-
-import pandas as pd
-
-
-def stringify_events_columns(df: pd.DataFrame) -> pd.DataFrame:
-    out = df.copy()
-
-    def _fmt_pair_list(v):
-        if isinstance(v, (list, tuple)) and len(v) > 0:
-            try:
-                return "; ".join(f"{name}: ${amt:,.2f}" for (name, amt) in v)
-            except Exception:
-                return str(v)
-        return "" if v is None or (isinstance(v, float) and pd.isna(v)) else str(v)
-
-    for col in [
-        "cc_extra_on_due",
-        "cc_interest_posted",
-        "cc_min_paid",
-        "oneoff_contribs",
-        "oneoff_paid",
-    ]:
-        if col in out.columns:
-            out[col] = out[col].apply(_fmt_pair_list)
-    return out
 </file>
 
 <file path="src/cashsim/ui/state.py">
 from __future__ import annotations
 
 from datetime import date
+
 import pandas as pd
 import streamlit as st
 
-from cashsim.models import Bill, CreditCard, Dials, IOU, InvestmentSettings, OneOff
+from cashsim.models import IOU, Bill, CreditCard, Dials, InvestmentSettings, OneOff
 
 DEFAULT_BILLS_DF = pd.DataFrame(
     [
@@ -1749,65 +1934,12 @@ def dials_from_state() -> Dials:
     )
 </file>
 
-<file path="src/cashsim/utils/date_utils.py">
-from __future__ import annotations
-
-import calendar
-from datetime import date
-from functools import lru_cache
-
-from dateutil.relativedelta import relativedelta
-
-from cashsim.constants import CARD_ACT_MIN_DAYS
-
-
-def clamp_day(year: int, month: int, day: int) -> int:
-    last = calendar.monthrange(year, month)[1]
-    return min(day, last)
-
-
-def next_due_date(today: date, usual_day: int) -> date:
-    cand = date(today.year, today.month, clamp_day(today.year, today.month, usual_day))
-    if cand >= today:
-        return cand
-    nxt = today + relativedelta(months=+1)
-    return date(nxt.year, nxt.month, clamp_day(nxt.year, nxt.month, usual_day))
-
-
-@lru_cache(maxsize=4096)
-def next_due_date_cached(today: date, usual_day: int) -> date:
-    """LRU-cached wrapper; safe because inputs are hashable and function is pure."""
-    return next_due_date(today, usual_day)
-
-
-def prior_statement_day(due_day: int) -> int:
-    return max(1, due_day - CARD_ACT_MIN_DAYS)
-
-
-def next_statement_close_date(today: date, due_day: int, statement_day: int | None) -> date:
-    sd = statement_day or prior_statement_day(due_day)
-    cand = date(today.year, today.month, clamp_day(today.year, today.month, sd))
-    if cand >= today:
-        return cand
-    nxt = today + relativedelta(months=+1)
-    return date(nxt.year, nxt.month, clamp_day(nxt.year, nxt.month, sd))
-
-
-def last_statement_close_date(today: date, due_day: int, statement_day: int | None) -> date:
-    ns = next_statement_close_date(today, due_day, statement_day)
-    if ns > today:
-        from_prev = ns + relativedelta(months=-1)
-        sd = statement_day or prior_statement_day(due_day)
-        return date(from_prev.year, from_prev.month, clamp_day(from_prev.year, from_prev.month, sd))
-    return ns
-</file>
-
 <file path="src/cashsim/__init__.py">
-from .models import Bill, CreditCard, IOU, OneOff, InvestmentSettings, Dials
-from .sim.core import simulate_month
-from .sim.types import SimMetrics
 from .analytics.break_even import break_even_grid
 from .analytics.snapshot import monthly_snapshot
+from .models import IOU, Bill, CreditCard, Dials, InvestmentSettings, OneOff
+from .sim.core import simulate_month
+from .sim.types import SimMetrics
 
 __all__ = [
     "Bill",
@@ -1832,27 +1964,26 @@ if __name__ == "__main__":
 
 <file path="src/cashsim/cli.py">
 # src/cashsim/cli.py
-from streamlit.web import cli as stcli
 import sys
+
+from streamlit.web import cli as stcli
 
 
 def st_main() -> None:
     sys.argv = ["streamlit", "run", "src/cashsim/ui/streamlit_app.py", "--server.headless=true"]
     stcli.main()
-</file>
 
-<file path="src/cashsim/constants.py">
-from __future__ import annotations
 
-DAYS_PER_YEAR = 365
-CARD_ACT_MIN_DAYS = 21  # typical minimum days between statement close and due date
+def main(argv: list[str] | None = None) -> int:
+    """Console entry point wrapper calling st_main()."""
+    return st_main(argv)
 </file>
 
 <file path="src/cashsim/models.py">
 from __future__ import annotations
 
 from datetime import date
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -1875,7 +2006,7 @@ class CreditCard(BaseModel):
     due_day: int = Field(ge=1, le=31, description="Payment due day")
     min_pct: float = Field(ge=0, le=1, description="e.g. 0.02 for 2%")
     min_floor: float = Field(ge=0, description="absolute floor, e.g. $25")
-    statement_day: Optional[int] = Field(
+    statement_day: int | None = Field(
         default=None,
         ge=1,
         le=31,
@@ -1887,7 +2018,7 @@ class IOU(BaseModel):
     name: str = Field(min_length=1)
     balance: float = Field(ge=0)
     apr: float = Field(ge=0, description="APR decimal; 0.0 if no interest")
-    due_day: Optional[int] = Field(default=None, ge=1, le=31)
+    due_day: int | None = Field(default=None, ge=1, le=31)
     min_pct: float = Field(default=0.0, ge=0, le=1)
     min_floor: float = Field(default=0.0, ge=0)
 
@@ -1936,7 +2067,8 @@ class Dials(BaseModel):
 </file>
 
 <file path="tests/test_interest_decimal.py">
-from decimal import Decimal, ROUND_HALF_UP, ROUND_HALF_EVEN
+from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP, Decimal
+
 from cashsim.utils.money import D, quantize_cents
 
 
@@ -1955,141 +2087,37 @@ def test_adb_property_equivalence():
     days = Decimal(len(daily))
     apr = Decimal("0.2199")
     daily_rate = apr / Decimal(365)
-    adb = sum(daily) / days
+    adb = sum(daily, D("0")) / days
 
     i1 = quantize_cents(adb * daily_rate * days, rounding=ROUND_HALF_UP)
-    i2 = quantize_cents(sum(b * daily_rate for b in daily), rounding=ROUND_HALF_UP)
+    i2 = quantize_cents(sum((b * daily_rate for b in daily), D("0")), rounding=ROUND_HALF_UP)
     assert i1 == i2
 </file>
 
-<file path=".repomixignore">
-# Add patterns to ignore here, one per line
-# Example:
-# *.log
-# tmp/
-.streamlit/secrets.toml
-</file>
-
-<file path="patch.diff">
-*** Begin Patch
-*** Update File: src/cashsim/utils/money.py
-@@
--from __future__ import annotations
--
--from decimal import Decimal, ROUND_HALF_UP
--
--CENT = Decimal("0.01")
--
--
--def to_cents(x: float | str) -> int:
--    """Convert a float/str dollar amount to integer cents (half-up)."""
--    return int((Decimal(str(x)).quantize(CENT, rounding=ROUND_HALF_UP) * 100))
--
--
--def from_cents(c: int) -> float:
--    """Convert integer cents back to a float dollars representation."""
--    return float(Decimal(c) / 100)
--
--
--def round_cents(x: float | str | Decimal) -> float:
--    """Round a dollar amount to 2 decimals (half-up) and return float."""
--    return float(Decimal(str(x)).quantize(CENT, rounding=ROUND_HALF_UP))
-+from __future__ import annotations
-+
-+from decimal import Decimal, ROUND_HALF_UP, ROUND_HALF_EVEN
-+
-+# Always define a single "cent" quantum for money rounding.
-+CENT = Decimal("0.01")
-+
-+def D(x: float | int | str | Decimal) -> Decimal:
-+    """Safe Decimal constructor (avoid binary float artifacts)."""
-+    return x if isinstance(x, Decimal) else Decimal(str(x))
-+
-+def quantize_cents(x: Decimal, *, rounding=ROUND_HALF_UP) -> Decimal:
-+    """Quantize a Decimal to cents with an explicit rounding mode."""
-+    return D(x).quantize(CENT, rounding=rounding)
-+
-+def to_cents(x: float | str | Decimal) -> int:
-+    """
-+    Convert a dollar amount to integer cents using HALF_UP.
-+    Use only at I/O boundaries (storage, display, external APIs).
-+    """
-+    return int(quantize_cents(D(x), rounding=ROUND_HALF_UP) * 100)
-+
-+def from_cents(c: int) -> float:
-+    """Convert integer cents back to float dollars representation (display only)."""
-+    return float(Decimal(int(c)) / 100)
-+
-+def round_cents(x: float | str | Decimal) -> float:
-+    """
-+    Round a dollar amount to two decimals (HALF_UP) and return float.
-+    Prefer doing all intermediate arithmetic with Decimal, then call this when
-+    you must hand a float to existing models/fields.
-+    """
-+    return float(quantize_cents(D(x), rounding=ROUND_HALF_UP))
-*** End Patch
+<file path=".gitignore">
+config.json
+bobbie_config.json
 </file>
 
 <file path="pyrightconfig.json">
 {
   "typeCheckingMode": "strict",
-  "executionEnvironments": [{ "root": "src" }],
+  "executionEnvironments": [
+    {
+      "root": "src"
+    }
+  ],
   "useLibraryCodeForTypes": true,
   "reportUnknownVariableType": "warning",
   "reportUnknownMemberType": "warning",
   "reportUnknownArgumentType": "warning",
   "reportUnknownParameterType": "warning",
-  "reportUnknownLambdaType": "warning"
-}
-</file>
-
-<file path="README.md">
-# CashSim
-
-Streamlit cash flow simulator.
-</file>
-
-<file path="repomix.config.json">
-{
-  "$schema": "https://repomix.com/schemas/latest/schema.json",
-  "input": {
-    "maxFileSize": 52428800
-  },
-  "output": {
-    "filePath": "repomix-output.xml",
-    "style": "xml",
-    "parsableStyle": false,
-    "fileSummary": true,
-    "directoryStructure": true,
-    "files": true,
-    "removeComments": false,
-    "removeEmptyLines": false,
-    "compress": false,
-    "topFilesLength": 5,
-    "showLineNumbers": false,
-    "truncateBase64": false,
-    "copyToClipboard": false,
-    "tokenCountTree": false,
-    "git": {
-      "sortByChanges": true,
-      "sortByChangesMaxCommits": 100,
-      "includeDiffs": false,
-      "includeLogs": false,
-      "includeLogsCount": 50
-    }
-  },
-  "include": [],
-  "ignore": {
-    "useGitignore": true,
-    "useDefaultPatterns": true,
-    "customPatterns": []
-  },
-  "security": {
-    "enableSecurityCheck": true
-  },
-  "tokenCount": {
-    "encoding": "o200k_base"
-  }
+  "reportUnknownLambdaType": "warning",
+  "reportMissingTypeStubs": "warning",
+  "reportMissingTypeArgument": "warning",
+  "reportMissingParameterType": "warning",
+  "reportArgumentType": "warning",
+  "reportAttributeAccessIssue": "warning"
 }
 </file>
 
@@ -2097,15 +2125,14 @@ Streamlit cash flow simulator.
 from __future__ import annotations
 
 from datetime import date, timedelta
-from typing import Dict, List, Tuple
-from decimal import Decimal, ROUND_HALF_UP, ROUND_HALF_EVEN
+from decimal import ROUND_HALF_UP
 
 from cashsim.models import CreditCard
 from cashsim.utils.date_utils import next_due_date, next_statement_close_date
 from cashsim.utils.money import D, quantize_cents, round_cents
 
 
-def accrue_adb_daily(card_state: Dict[str, Dict], cards: List[CreditCard]) -> None:
+def accrue_adb_daily(card_state: dict[str, dict], cards: list[CreditCard]) -> None:
     """
     Accumulate ADB using Decimal internally for interest math.
     Store back as floats to maintain compatibility with existing code.
@@ -2121,15 +2148,15 @@ def accrue_adb_daily(card_state: Dict[str, Dict], cards: List[CreditCard]) -> No
 
 
 def post_statement_charges_and_advance(
-    day: date, card_state: Dict[str, Dict], cards: List[CreditCard]
-) -> List[Tuple[str, float]]:
+    day: date, card_state: dict[str, dict], cards: list[CreditCard]
+) -> list[tuple[str, float]]:
     """
     Post ADB finance charges on statement close, lock min due, advance cycle.
     Interest is computed with Decimal and quantized to cents using HALF_UP,
     which is typical for consumer statements. Switch to ROUND_HALF_EVEN only
     if you explicitly choose banker's rounding and document why.
     """
-    events: List[Tuple[str, float]] = []
+    events: list[tuple[str, float]] = []
     for c in cards:
         st = card_state[c.name]
         if day == st["next_stmt"]:
@@ -2161,10 +2188,10 @@ def post_statement_charges_and_advance(
 
 
 def post_simple_interest_if_due(
-    day: date, last_post: Dict[str, date], cards: List[CreditCard]
-) -> List[Tuple[str, float]]:
+    day: date, last_post: dict[str, date], cards: list[CreditCard]
+) -> list[tuple[str, float]]:
     """Legacy: post interest on due date using days elapsed (Decimal math)."""
-    out: List[Tuple[str, float]] = []
+    out: list[tuple[str, float]] = []
     for c in cards:
         if next_due_date(day, c.due_day) == day and c.balance > 0 and c.apr > 0:
             days_elapsed = max(0, (day - last_post[c.name]).days)
@@ -2192,11 +2219,12 @@ import streamlit as st
 from cashsim.analytics.break_even import break_even_grid
 from cashsim.analytics.snapshot import monthly_snapshot
 from cashsim.io.config_io import load_config, save_config
+from cashsim.io.gsheets import read_wishlist_by_url  # Google Sheets integration
 from cashsim.models import Dials
 from cashsim.planning.planner import (
+    constant_target_from_schedule,
     plan_min_daily_earnings,
     plan_variable_daily_earnings,
-    constant_target_from_schedule,
 )
 from cashsim.sim.core import simulate_month
 from cashsim.ui.components import (
@@ -2210,7 +2238,6 @@ from cashsim.ui.components import (
 from cashsim.ui.formatters import stringify_events_columns
 from cashsim.ui.state import dials_from_state, init_session_once
 from cashsim.utils.date_utils import next_due_date_cached as next_due_date
-from cashsim.io.gsheets import read_wishlist_by_url  # Google Sheets integration
 
 # Pandas CoW: future-proof semantics and fewer hidden copies
 pd.options.mode.copy_on_write = True
@@ -2422,7 +2449,7 @@ with tab_debt:
     ev = sim_df.explode("cc_events", ignore_index=True)
     if bool("cc_events" in ev.columns and ev["cc_events"].notna().any()):
         base = ev.loc[ev["cc_events"].notna(), ["date", "cc_events"]].reset_index(drop=True)
-        events_df = pd.json_normalize(base["cc_events"]).reset_index(drop=True)
+        events_df = pd.json_normalize(base["cc_events"].tolist()).reset_index(drop=True)
         if "date" in events_df.columns:
             events_df = events_df.rename(columns={"date": "event_date"})
         events_df.insert(0, "date", base["date"].reset_index(drop=True))
@@ -2792,7 +2819,7 @@ with tab_wishlist:
 <file path="src/cashsim/utils/money.py">
 from __future__ import annotations
 
-from decimal import Decimal, ROUND_HALF_UP, ROUND_HALF_EVEN
+from decimal import ROUND_HALF_UP, Decimal
 
 # One "cent" quantum for money rounding.
 CENT = Decimal("0.01")
@@ -2828,11 +2855,6 @@ def round_cents(x: float | str | Decimal) -> float:
     you must hand a float to existing models/fields.
     """
     return float(quantize_cents(D(x), rounding=ROUND_HALF_UP))
-</file>
-
-<file path=".gitignore">
-config.json
-bobbie_config.json
 </file>
 
 <file path="pyproject.toml">

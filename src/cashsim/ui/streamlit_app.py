@@ -93,7 +93,7 @@ with tab_inputs:
     cfg_path = st.text_input("path", value="config.json")
     c1, c2, _ = st.columns([1, 1, 1])
 
-    if c1.button("Load file", use_container_width=True):
+    if c1.button("Load file", width="stretch"):
         try:
             mtime = os.path.getmtime(cfg_path) if os.path.exists(cfg_path) else 0.0
             d = _load_config_cached(cfg_path, mtime)
@@ -170,7 +170,7 @@ with tab_inputs:
         mime="application/json",
     )
 
-    if c2.button("Save file", use_container_width=True):
+    if c2.button("Save file", width="stretch"):
         try:
             save_config(_dials_with_blackouts(), cfg_path)
             st.success(f"Saved {cfg_path}")
@@ -221,7 +221,7 @@ with tab_bills:
         ["next_due", "type", "name"], kind="mergesort"
     )
     st.subheader("Rolled-forward preview (bills + estimated CC mins)")
-    st.dataframe(rolled_df, use_container_width=True, hide_index=True)
+    st.dataframe(rolled_df, width="stretch", hide_index=True)
     st.caption(
         "CC minimums here are estimates from current balances; actual mins are locked from statement balances."
     )
@@ -261,7 +261,7 @@ with tab_debt:
             "event_date",
         ]
         cols = [c for c in pref if c in events_df.columns]
-        st.dataframe(events_df[cols], use_container_width=True, hide_index=True)
+        st.dataframe(events_df[cols], width="stretch", hide_index=True)
     else:
         st.write("No due-date events within 60 days.")
 
@@ -296,7 +296,7 @@ with tab_oneoffs:
         oneoff_events_df = (
             pd.DataFrame(events).sort_values(["date", "event", "name"]).reset_index(drop=True)
         )
-        st.dataframe(oneoff_events_df, use_container_width=True, hide_index=True)
+        st.dataframe(oneoff_events_df, width="stretch", hide_index=True)
     else:
         st.write("No one-off contributions or payments in the next 60 days.")
 
@@ -313,8 +313,8 @@ with tab_sim:
     left, right = st.columns([1.2, 1.0])
     with left:
         st.subheader("Daily balance (projection)")
-        st.line_chart(sim_df.set_index("date")[["balance"]], use_container_width=True)
-        st.dataframe(stringify_events_columns(sim_df), use_container_width=True, hide_index=True)
+        st.line_chart(sim_df.set_index("date")[["balance"]], width="stretch")
+        st.dataframe(stringify_events_columns(sim_df), width="stretch", hide_index=True)
 
     with right:
         st.subheader("Key results")
@@ -340,7 +340,7 @@ with tab_analytics:
     st.subheader("Break-even daily earnings search (0–200)")
     fingerprint = _fingerprint(dials)
     be_df = run_break_even(fingerprint, days=31)
-    st.dataframe(be_df, use_container_width=True, hide_index=True)
+    st.dataframe(be_df, width="stretch", hide_index=True)
 
     st.subheader("Monthly snapshot (6 months)")
     snap = monthly_snapshot(dials, months=6)
@@ -428,8 +428,8 @@ with tab_planner:
         st.session_state["blackouts_df"] = st.data_editor(
             _blackouts,
             num_rows="dynamic",
-            column_config={"date": st.column_config.DateColumn("date")},
-            use_container_width=True,
+            column_config={"date": st.column_config.DateColumn("date", format="iso8601")},
+            width="stretch",
             key="blackouts_editor",
         )
 
@@ -470,12 +470,12 @@ with tab_planner:
 
             st.line_chart(
                 df.set_index("date")[["earn_required", "earn_capped"]],
-                use_container_width=True,
+                width="stretch",
             )
 
             st.dataframe(
                 df,
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
                 column_config={
                     "date": st.column_config.DateColumn("date", format="YYYY-MM-DD"),
@@ -527,7 +527,7 @@ with tab_wishlist:
             sa = st.secrets["gcp_service_account"]
             wish = read_wishlist_by_url(sheet_url, ws_name, sa)
             st.subheader("Wishlist data")
-            st.dataframe(wish, use_container_width=True, hide_index=True)
+            st.dataframe(wish, width="stretch", hide_index=True)
 
             # Build a day-by-day plan first (respecting blackouts)
             dials = dials_from_state()
@@ -601,7 +601,7 @@ with tab_wishlist:
                 ["Earliest fully-funded", "Priority"], na_position="last", ascending=[True, False]
             )
             st.subheader("Earliest good buy dates (by priority)")
-            st.dataframe(out, use_container_width=True, hide_index=True)
+            st.dataframe(out, width="stretch", hide_index=True)
         except KeyError:
             st.error("Missing st.secrets['gcp_service_account']. See instructions below.")
         except Exception as e:

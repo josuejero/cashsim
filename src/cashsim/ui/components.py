@@ -99,7 +99,7 @@ def oneoff_editor(df: pd.DataFrame, key="oneoff_editor") -> pd.DataFrame:
         width="stretch",
         column_config={
             "name": st.column_config.TextColumn("name"),
-            "due_date": st.column_config.DateColumn("due date"),
+            "due_date": st.column_config.DateColumn("due date", format="iso8601"),
             "amount": st.column_config.NumberColumn("amount", min_value=0.0, step=1.0),
             "priority": st.column_config.NumberColumn(
                 "priority (higher=faster)", min_value=0, max_value=99, step=1

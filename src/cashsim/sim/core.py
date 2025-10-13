@@ -2,16 +2,18 @@ from __future__ import annotations
 
 import re
 from datetime import date, timedelta
-from typing import Dict, List, Tuple
 
 import pandas as pd
 
-from cashsim.models import Bill, CreditCard, Dials, IOU, OneOff
+from cashsim.models import IOU, Bill, CreditCard, Dials, OneOff
 from cashsim.utils.date_utils import (
     last_statement_close_date,
-    next_due_date_cached as next_due_date,
     next_statement_close_date,
 )
+from cashsim.utils.date_utils import (
+    next_due_date_cached as next_due_date,
+)
+
 from .events import add_extra_event, add_finance_event, add_min_event
 from .gas import apply_gas_skim_and_fillups
 from .interest import (
@@ -33,13 +35,13 @@ def simulate_month(
 ) -> tuple[pd.DataFrame, SimMetrics]:
     start = start or date.today()
 
-    bills: List[Bill] = list(dials.bills)
-    cards: List[CreditCard] = [CreditCard(**c.model_dump()) for c in dials.credit_cards]
-    ious: List[IOU] = [IOU(**x.model_dump()) for x in dials.ious]
-    oneoffs: List[OneOff] = [OneOff(**o.model_dump()) for o in getattr(dials, "oneoffs", [])]
+    bills: list[Bill] = list(dials.bills)
+    cards: list[CreditCard] = [CreditCard(**c.model_dump()) for c in dials.credit_cards]
+    ious: list[IOU] = [IOU(**x.model_dump()) for x in dials.ious]
+    oneoffs: list[OneOff] = [OneOff(**o.model_dump()) for o in getattr(dials, "oneoffs", [])]
 
     # per-card state
-    card_state: Dict[str, Dict] = {}
+    card_state: dict[str, dict] = {}
     for c in cards:
         cycle_start = last_statement_close_date(start, c.due_day, c.statement_day)
         next_stmt = next_statement_close_date(start, c.due_day, c.statement_day)
@@ -57,10 +59,10 @@ def simulate_month(
             "unposted_interest_est": 0.0,
         }
 
-    oneoff_saved: Dict[str, float] = {o.name: 0.0 for o in oneoffs}
-    oneoff_paid: Dict[str, bool] = {o.name: False for o in oneoffs}
+    oneoff_saved: dict[str, float] = {o.name: 0.0 for o in oneoffs}
+    oneoff_paid: dict[str, bool] = {o.name: False for o in oneoffs}
 
-    records: List[dict] = []
+    records: list[dict] = []
     gas_bucket = 0.0
     balance = float(dials.current_cash)
     min_balance = balance
@@ -73,7 +75,7 @@ def simulate_month(
     paid_iou_mins = 0.0
     paid_oneoffs_total = 0.0
 
-    last_interest_post_simple: Dict[str, date] = {c.name: start for c in cards}
+    last_interest_post_simple: dict[str, date] = {c.name: start for c in cards}
 
     for i in range(days):
         day = start + timedelta(days=i)
@@ -91,7 +93,7 @@ def simulate_month(
             paid_non_debt_bills += bill_due_today
 
         # ---------- one-off contributions from surplus ----------
-        oneoff_contrib_events: List[Tuple[str, float]] = []
+        oneoff_contrib_events: list[tuple[str, float]] = []
         total_now, _, _, gas_pred_now = reserve_next_7_days(
             day,
             bills=bills,
@@ -126,7 +128,7 @@ def simulate_month(
                 oneoff_contrib_events.append((o.name, contrib))
 
         # ---------- pay one-offs on due date ----------
-        oneoff_paid_events: List[Tuple[str, float]] = []
+        oneoff_paid_events: list[tuple[str, float]] = []
         for o in oneoffs:
             if (not oneoff_paid[o.name]) and (day == o.due_date):
                 use_saved = min(oneoff_saved[o.name], o.amount)
@@ -139,10 +141,10 @@ def simulate_month(
                 paid_oneoffs_total = round(paid_oneoffs_total + o.amount, 2)
 
         # ---------- cards ----------
-        interest_events: List[Tuple[str, float]] = []
-        minpay_events: List[Tuple[str, float]] = []
-        extra_on_due_events: List[Tuple[str, float]] = []
-        unified_events: List[dict] = []
+        interest_events: list[tuple[str, float]] = []
+        minpay_events: list[tuple[str, float]] = []
+        extra_on_due_events: list[tuple[str, float]] = []
+        unified_events: list[dict] = []
 
         if dials.interest_mode == "statement_adb":
             accrue_adb_daily(card_state, cards)

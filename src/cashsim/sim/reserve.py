@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
-from typing import Dict, Optional, Tuple
 
-from cashsim.models import Bill, CreditCard, IOU, OneOff
+from cashsim.models import IOU, Bill, CreditCard, OneOff
 from cashsim.utils.date_utils import next_due_date_cached as next_due_date
+
 from .gas import predict_fill_cost_7d
 
 
@@ -16,14 +16,14 @@ def reserve_next_7_days(
     ious: list[IOU],
     oneoffs: list[OneOff],
     include_today: bool,
-    locked_mins: Optional[Dict[str, float]] = None,
-    locked_due_dates: Optional[Dict[str, date]] = None,
-    oneoff_saved: Optional[Dict[str, float]] = None,
+    locked_mins: dict[str, float] | None = None,
+    locked_due_dates: dict[str, date] | None = None,
+    oneoff_saved: dict[str, float] | None = None,
     gas_bucket: float = 0.0,
     daily_earn: float = 0.0,
     gas_pct: float = 0.0,
     fill_size: float = 1.0,
-) -> Tuple[float, float, float, float]:
+) -> tuple[float, float, float, float]:
     """
     7-day reserve = non-debt bills + CC/IOU minimums + one-off shortfalls + predicted gas fills.
     Returns (total, nondebt, debt_mins, gas_pred).

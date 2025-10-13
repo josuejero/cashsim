@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from datetime import date
+
 import pandas as pd
 import streamlit as st
 
-from cashsim.models import Bill, CreditCard, Dials, IOU, InvestmentSettings, OneOff
+from cashsim.models import IOU, Bill, CreditCard, Dials, InvestmentSettings, OneOff
 
 DEFAULT_BILLS_DF = pd.DataFrame(
     [
@@ -65,8 +66,8 @@ def init_session_once() -> None:
     st.session_state.setdefault("interest_mode", "statement_adb")
     st.session_state.setdefault("extra_strategy", "avalanche")
     st.session_state.setdefault(
-    "blackouts_df", pd.DataFrame({"date": pd.Series([], dtype="datetime64[ns]")})
-)
+        "blackouts_df", pd.DataFrame({"date": pd.Series([], dtype="datetime64[ns]")})
+    )
 
 
 def _coerce_date(v):
@@ -109,7 +110,7 @@ def dials_from_state() -> Dials:
         OneOff(**{**row, "due_date": _coerce_date(row["due_date"])})
         for row in st.session_state["oneoff_table"].to_dict(orient="records")
     ]
-    
+
     blackouts: list[date] = []
     for v in st.session_state.get("blackouts_df", pd.DataFrame({"date": []}))["date"]:
         if pd.notna(v):

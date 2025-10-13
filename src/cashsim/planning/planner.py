@@ -1,20 +1,21 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, timedelta
-from typing import List, Optional, Literal, Iterable, Set
+from typing import Literal
 
-from cashsim.models import Bill, CreditCard, IOU, OneOff, Dials
+from cashsim.models import IOU, Bill, CreditCard, Dials, OneOff
 from cashsim.sim.core import simulate_month
 from cashsim.sim.gas import apply_gas_skim_and_fillups
-from cashsim.sim.roll import sum_non_debt_bills_due_today
 from cashsim.sim.reserve import reserve_next_7_days
+from cashsim.sim.roll import sum_non_debt_bills_due_today
 from cashsim.utils.date_utils import next_due_date_cached as next_due_date
-
 
 # ---------------------------
 # Existing constant-target planner
 # ---------------------------
+
 
 @dataclass
 class PlanResult:
@@ -71,16 +72,17 @@ def plan_min_daily_earnings(
 # New variable day-by-day planner
 # ---------------------------
 
+
 @dataclass
 class DailyPlanRow:
     date: date
-    earn_required: float              # minimum needed today
-    earn_capped: float                # applied after daily_cap (if any)
+    earn_required: float  # minimum needed today
+    earn_capped: float  # applied after daily_cap (if any)
     cap_exceeded: bool
-    end_balance: float                # projected end-of-day balance using earn_capped
-    reserve_7d_total: float           # next 7 days need (non-debt bills + mins + one-offs + gas)
+    end_balance: float  # projected end-of-day balance using earn_capped
+    reserve_7d_total: float  # next 7 days need (non-debt bills + mins + one-offs + gas)
     bills_today: float
-    mins_today: float                 # CC + IOU mins paid today
+    mins_today: float  # CC + IOU mins paid today
     oneoffs_today: float
     gas_fill_cost_today: float
     gas_bucket_end: float
@@ -88,10 +90,10 @@ class DailyPlanRow:
 
 @dataclass
 class DailyPlanResult:
-    ok: bool                          # False if any day needed > daily_cap (when provided)
+    ok: bool  # False if any day needed > daily_cap (when provided)
     min_balance: float
     min_balance_date: date | None
-    rows: List[DailyPlanRow]
+    rows: list[DailyPlanRow]
 
 
 def _cc_mins_due_today(day: date, cards: list[CreditCard]) -> float:
@@ -164,9 +166,9 @@ def plan_variable_daily_earnings(
     start: date | None = None,
     days: int = 60,
     safety_target: Literal["zero", "cushion"] = "zero",
-    daily_cap: Optional[float] = None,
-    future_daily_hint: Optional[float] = None,
-    blackout_dates: Optional[Iterable[date]] = None,
+    daily_cap: float | None = None,
+    future_daily_hint: float | None = None,
+    blackout_dates: Iterable[date] | None = None,
     tol: float = 0.01,
 ) -> DailyPlanResult:
     """
@@ -183,7 +185,9 @@ def plan_variable_daily_earnings(
     """
     start = start or date.today()
     days = max(1, int(days))
-    future_daily_hint = float(future_daily_hint if future_daily_hint is not None else dials.weekday_earnings)
+    future_daily_hint = float(
+        future_daily_hint if future_daily_hint is not None else dials.weekday_earnings
+    )
 
     # Working copies of state
     balance = float(dials.current_cash)
@@ -198,7 +202,7 @@ def plan_variable_daily_earnings(
     min_balance_date: date | None = start
     ok = True
 
-    blackout_set: Set[date] = set(blackout_dates or [])
+    blackout_set: set[date] = set(blackout_dates or [])
 
     for i in range(days):
         day = start + timedelta(days=i)
@@ -219,7 +223,9 @@ def plan_variable_daily_earnings(
             """End-of-day balance if we earned 'earn' today (no mutation of real state)."""
             b = balance
             g = gas_bucket
-            b2, g2, fills = apply_gas_skim_and_fillups(b, g, earn, dials.gas_pct, dials.gas_fill_size)
+            b2, g2, fills = apply_gas_skim_and_fillups(
+                b, g, earn, dials.gas_pct, dials.gas_fill_size
+            )
             gas_fill_cost = fills * dials.gas_fill_size
             b2 -= nondebt_today
             b2 -= cc_min_peek
@@ -292,7 +298,11 @@ def plan_variable_daily_earnings(
 
         # Mutate real state using earn_used (or 0 if blackout) and pay today's items
         b2, g2, gas_fill_cost = apply_gas_skim_and_fillups(
-            balance, gas_bucket, 0.0 if is_blackout else earn_used, dials.gas_pct, dials.gas_fill_size
+            balance,
+            gas_bucket,
+            0.0 if is_blackout else earn_used,
+            dials.gas_pct,
+            dials.gas_fill_size,
         )
         # pay non-debt bills
         b2 -= nondebt_today
@@ -352,7 +362,9 @@ def plan_variable_daily_earnings(
     )
 
 
-def constant_target_from_schedule(rows: List[DailyPlanRow], blackout_dates: Iterable[date]) -> float:
+def constant_target_from_schedule(
+    rows: list[DailyPlanRow], blackout_dates: Iterable[date]
+) -> float:
     """Return a safe constant target to hit on working days (max earn_required on non-blackout days)."""
     bset = set(blackout_dates or [])
     needers = [r.earn_required for r in rows if r.date not in bset]

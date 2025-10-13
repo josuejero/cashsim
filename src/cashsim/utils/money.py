@@ -1,17 +1,20 @@
 from __future__ import annotations
 
-from decimal import Decimal, ROUND_HALF_UP, ROUND_HALF_EVEN
+from decimal import ROUND_HALF_UP, Decimal
 
 # One "cent" quantum for money rounding.
 CENT = Decimal("0.01")
+
 
 def D(x: float | int | str | Decimal) -> Decimal:
     """Safe Decimal constructor (avoid binary float artifacts)."""
     return x if isinstance(x, Decimal) else Decimal(str(x))
 
+
 def quantize_cents(x: Decimal, *, rounding=ROUND_HALF_UP) -> Decimal:
     """Quantize a Decimal to cents with an explicit rounding mode."""
     return D(x).quantize(CENT, rounding=rounding)
+
 
 def to_cents(x: float | str | Decimal) -> int:
     """
@@ -20,9 +23,11 @@ def to_cents(x: float | str | Decimal) -> int:
     """
     return int(quantize_cents(D(x), rounding=ROUND_HALF_UP) * 100)
 
+
 def from_cents(c: int) -> float:
     """Convert integer cents back to float dollars representation (display only)."""
     return float(Decimal(int(c)) / 100)
+
 
 def round_cents(x: float | str | Decimal) -> float:
     """

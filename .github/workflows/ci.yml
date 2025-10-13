@@ -1,0 +1,60 @@
+name: CI you can trust
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }} (with pip cache)
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          # make caching robust when you add/rename files
+          cache-dependency-path: |
+            pyproject.toml
+            requirements*.txt
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      # Install the tooling we need for lint, types, and tests
+      - name: Install CI tooling
+        run: pip install ruff mypy pyright pytest
+
+      # The project uses a src/ layout; expose it without installing the package
+      - name: Expose src/ on PYTHONPATH
+        run: echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
+
+      # Optional: install the project on the version that matches pyproject's floor (>=3.12)
+      - name: Editable install on 3.12
+        if: matrix.python-version == '3.12'
+        run: pip install -e .
+
+      - name: Ruff (lint)
+        run: ruff check .
+        # For PR annotations, you can add: --output-format=github
+
+      - name: Pyright (type check)
+        run: pyright
+
+      - name: Mypy (type check)
+        run: mypy .
+
+      - name: Pytest
+        run: pytest -q

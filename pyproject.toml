@@ -31,6 +31,12 @@ dev = [
   "pytest>=8.2",
   "mypy>=1.10",
   "types-python-dateutil>=2.9.0.20250822"
+,
+  "pyright"
+,
+  "pandas-stubs"
+,
+  "MonkeyType"
 ]
 
 [project.scripts]
@@ -46,7 +52,8 @@ select = [
   "I",        # import sorting
   "UP",       # pyupgrade
   "B",        # bugbear
-  "SIM"       # flake8-simplify
+  "SIM",      # flake8-simplify
+  "ANN"       # type annotations
 ]
 
 [tool.ruff.format]
@@ -57,7 +64,7 @@ quote-style = "double"
 venvPath = "."
 venv = ".venv"
 reportMissingTypeStubs = "warning"
-typeCheckingMode = "basic"
+typeCheckingMode = "strict"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/cashsim"]

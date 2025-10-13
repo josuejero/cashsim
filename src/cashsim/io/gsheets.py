@@ -3,12 +3,15 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+import google.auth  # Application Default Credentials (ADC)
 import gspread
 import pandas as pd
 import streamlit as st
-from gspread_dataframe import get_as_dataframe, set_with_dataframe  # type: ignore[reportMissingTypeStubs]
 from google.oauth2 import service_account
-import google.auth  # Application Default Credentials (ADC)
+from gspread_dataframe import (  # type: ignore[reportMissingTypeStubs]
+    get_as_dataframe,
+    set_with_dataframe,
+)
 
 SHEETS_READONLY = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 SHEETS_RW = ["https://www.googleapis.com/auth/spreadsheets"]

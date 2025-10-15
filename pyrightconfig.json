@@ -3,6 +3,15 @@
   "executionEnvironments": [
     {
       "root": "src"
+    },
+    {
+      "root": "./src"
+    },
+    {
+      "root": "./tests",
+      "extraPaths": [
+        "./src"
+      ]
     }
   ],
   "useLibraryCodeForTypes": true,
@@ -15,5 +24,11 @@
   "reportMissingTypeArgument": "warning",
   "reportMissingParameterType": "warning",
   "reportArgumentType": "warning",
-  "reportAttributeAccessIssue": "warning"
+  "reportAttributeAccessIssue": "warning",
+  "venvPath": ".",
+  "venv": ".venv",
+  "reportMissingImports": "warning",
+  "reportUntypedFunctionDecorator": "warning",
+  "reportUnusedVariable": "warning",
+  "reportCallIssue": "warning"
 }

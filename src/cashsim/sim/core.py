@@ -6,13 +6,8 @@ from datetime import date, timedelta
 import pandas as pd
 
 from cashsim.models import IOU, Bill, CreditCard, Dials, OneOff
-from cashsim.utils.date_utils import (
-    last_statement_close_date,
-    next_statement_close_date,
-)
-from cashsim.utils.date_utils import (
-    next_due_date_cached as next_due_date,
-)
+from cashsim.utils.date_utils import last_statement_close_date, next_statement_close_date
+from cashsim.utils.date_utils import next_due_date_cached as next_due_date
 
 from .events import add_extra_event, add_finance_event, add_min_event
 from .gas import apply_gas_skim_and_fillups

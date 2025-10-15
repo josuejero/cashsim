@@ -18,7 +18,6 @@ class Snapshot(TypedDict):
 
 
 def monthly_snapshot(dials: Dials, months: int = 1) -> Snapshot:
-    """Daily earnings semantics: 7d/week."""
     months = max(1, min(6, int(months)))
     today = date.today()
     result: Snapshot = {
@@ -34,10 +33,10 @@ def monthly_snapshot(dials: Dials, months: int = 1) -> Snapshot:
         first_ts = (pd.Timestamp(today).to_period("M") + k).to_timestamp()
         last_ts = (pd.Timestamp(today).to_period("M") + k + 1).to_timestamp()
 
-        workday_count = 20  # Assuming 20 workdays per month
-        income = dials.daily_income * workday_count
-        gas = dials.daily_gas * workday_count
-        total_bills = dials.monthly_bills
+        workday_count = 20  # heuristic
+        income = dials.weekday_earnings * workday_count
+        gas = dials.weekday_earnings * dials.gas_pct * workday_count
+        total_bills = sum(b.amount for b in dials.bills)
         leftover = income - gas - total_bills
 
         event = {

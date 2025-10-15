@@ -19,6 +19,7 @@ from cashsim.planning.planner import (
     plan_variable_daily_earnings,
 )
 from cashsim.sim.core import simulate_month
+from cashsim.sim.types import SimMetrics
 from cashsim.ui.components import (
     bills_editor,
     cc_editor,
@@ -51,13 +52,13 @@ def _fingerprint(dials: Dials) -> str:
 
 
 @st.cache_data(show_spinner=False)
-def run_sim(dials_json: str, start: date, days: int):
+def run_sim(dials_json: str, start: date, days: int) -> tuple[pd.DataFrame, SimMetrics]:
     d = Dials.model_validate_json(dials_json)
     return simulate_month(d, start=start, days=days)
 
 
 @st.cache_data(show_spinner=False)
-def run_break_even(dials_json: str, days: int = 31):
+def run_break_even(dials_json: str, days: int = 31) -> pd.DataFrame:
     d = Dials.model_validate_json(dials_json)
     candidates = [float(i) for i in range(0, 201)]
     return break_even_grid(d, candidates, days=days)
@@ -372,16 +373,17 @@ with tab_planner:
             key="planner_days_constant",
         )
 
-        res = plan_min_daily_earnings(dials, days=days)
-        if res.ok:
+        res_const = plan_min_daily_earnings(dials, days=days)
+        if res_const.ok:
             st.success(
-                f"Minimum constant daily earnings to avoid overdraft in {days} days: ${res.daily_target:,.2f}"
+                f"Minimum constant daily earnings to avoid overdraft in {days} days: ${res_const.daily_target:,.2f}"
             )
             st.caption(
-                f"Simulated min balance: ${res.min_balance:,.2f} (first negative: {res.first_negative_date})"
+                f"Simulated min balance: ${res_const.min_balance:,.2f} (first negative: {res_const.first_negative_date})"
             )
         else:
             st.error("Could not find a feasible daily target up to a very large upper bound.")
+
     else:
         st.subheader("Day-by-day earnings schedule")
 
@@ -433,37 +435,27 @@ with tab_planner:
             key="blackouts_editor",
         )
 
-        blackout_dates: list[date] = []
+        planner_blackouts: list[date] = []
         for v in pd.to_datetime(st.session_state["blackouts_df"]["date"], errors="coerce"):
             if pd.notna(v):
-                blackout_dates.append(pd.to_datetime(v).date())
+                planner_blackouts.append(pd.to_datetime(v).date())
 
-        res = plan_variable_daily_earnings(
+        res_var = plan_variable_daily_earnings(
             dials,
             days=days,
             safety_target="zero" if safety_target == "zero" else "cushion",
             daily_cap=cap,
             future_daily_hint=future_hint,
-            blackout_dates=blackout_dates,
+            blackout_dates=planner_blackouts,
         )
-
-        df = pd.DataFrame([r.__dict__ for r in res.rows])
-
-        st.caption(
-            "We keep next week’s bills, minimums, one-off shortfalls, and predicted gas fills covered "
-            "before allowing surplus. The plan shows the smallest earnings needed each day to stay above "
-            "your chosen safety target."
-        )
-
+        df = pd.DataFrame([r.__dict__ for r in res_var.rows])
         st.metric(
-            "Min projected balance", f"${res.min_balance:,.2f}", help=str(res.min_balance_date)
+            "Min projected balance",
+            f"${res_var.min_balance:,.2f}",
+            help=str(res_var.min_balance_date),
         )
-
-        if not res.ok:
-            st.warning(
-                "Plan hits the daily cap on at least one day. Consider raising the cap, extending the horizon, "
-                "or lowering near-term obligations."
-            )
+        if not res_var.ok:
+            st.warning("Plan hits the daily cap on at least one day ...")
 
         if not df.empty:
             df["date"] = pd.to_datetime(df["date"])  # ensure datetime index for charts
@@ -499,7 +491,7 @@ with tab_planner:
             )
 
             # constant target for working days
-            const_target = constant_target_from_schedule(res.rows, blackout_dates)
+            const_target = constant_target_from_schedule(res_var.rows, planner_blackouts)
             st.metric(
                 "Constant target on working days",
                 f"${const_target:,.2f}",
@@ -538,20 +530,21 @@ with tab_wishlist:
                 bdf["date"] = pd.Series([], dtype="datetime64[ns]")
             else:
                 bdf["date"] = pd.to_datetime(bdf["date"], errors="coerce")
-            blackout_dates: list[date] = []
+
+            wishlist_blackouts: list[date] = []
             for v in bdf["date"]:
                 if pd.notna(v):
-                    blackout_dates.append(pd.to_datetime(v).date())
+                    wishlist_blackouts.append(pd.to_datetime(v).date())
 
-            plan = plan_variable_daily_earnings(
+            plan_for_wishlist = plan_variable_daily_earnings(
                 dials,
                 days=horizon,
                 safety_target="zero",
                 daily_cap=None,
                 future_daily_hint=float(dials.weekday_earnings),
-                blackout_dates=blackout_dates,
+                blackout_dates=wishlist_blackouts,
             )
-            plan_df = pd.DataFrame([r.__dict__ for r in plan.rows])
+            plan_df = pd.DataFrame([r.__dict__ for r in plan_for_wishlist.rows])
             plan_df["date"] = pd.to_datetime(plan_df["date"])
             base = (
                 0.0  # change to float(dials.safety_cushion) if you want cushion as the hard floor

@@ -3,3 +3,4 @@
 # *.log
 # tmp/
 .streamlit/secrets.toml
+monkeytype.sqlite3

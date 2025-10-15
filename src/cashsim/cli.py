@@ -1,4 +1,5 @@
-# src/cashsim/cli.py
+from __future__ import annotations
+
 import sys
 
 from streamlit.web import cli as stcli
@@ -10,5 +11,5 @@ def st_main() -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Console entry point wrapper calling st_main()."""
-    return st_main(argv)
+    st_main()
+    return 0

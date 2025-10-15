@@ -11,7 +11,7 @@ def D(x: float | int | str | Decimal) -> Decimal:
     return x if isinstance(x, Decimal) else Decimal(str(x))
 
 
-def quantize_cents(x: Decimal, *, rounding=ROUND_HALF_UP) -> Decimal:
+def quantize_cents(x: Decimal, *, rounding: str = ROUND_HALF_UP) -> Decimal:
     """Quantize a Decimal to cents with an explicit rounding mode."""
     return D(x).quantize(CENT, rounding=rounding)
 
@@ -36,3 +36,15 @@ def round_cents(x: float | str | Decimal) -> float:
     you must hand a float to existing models/fields.
     """
     return float(quantize_cents(D(x), rounding=ROUND_HALF_UP))
+
+
+# --- Drop-in helpers (Decimal everywhere for interest posting) ---
+# See: Python decimal & quantize for exact-money rounding (HALF_UP is typical for statements).
+# https://docs.python.org/3/library/decimal.html
+def round_money(x: Decimal) -> Decimal:
+    return quantize_cents(D(x), rounding=ROUND_HALF_UP)
+
+
+def post_daily_interest(balance: Decimal, apr: Decimal) -> Decimal:
+    daily_rate = D(apr) / D("365")
+    return round_money(D(balance) * daily_rate)

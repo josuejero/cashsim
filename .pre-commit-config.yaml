@@ -1,33 +1,35 @@
 default_language_version:
   python: python3.12
-
 repos:
-  # Ruff: lint first (optionally fix), then format
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.0
-    hooks:
-      - id: ruff-check
-        args: [--fix]   # drop --fix if you prefer read-only
-      - id: ruff-format
-
-  # mypy (type checker)
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.18.2
-    hooks:
-      - id: mypy
-        additional_dependencies:
-          - pandas-stubs
-          - types-python-dateutil
-
-  # Pyright (alt type checker)
-  - repo: https://github.com/ComPWA/pyright-pre-commit
-    rev: v1.1.406
-    hooks:
-      - id: pyright
-
-  # Bandit (security linter)
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.8.6
-    hooks:
-      - id: bandit
-        args: [ -r, src, -x, tests,.venv,venv ]
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.14.0
+  hooks:
+  - id: ruff-check
+    args:
+    - --fix
+    - --unsafe-fixes
+    - --ignore
+    - E501
+  - id: ruff-format
+- repo: https://github.com/pre-commit/mirrors-mypy
+  rev: v1.18.2
+  hooks:
+  - id: mypy
+    additional_dependencies:
+    - pandas-stubs
+    - types-python-dateutil
+- repo: https://github.com/ComPWA/pyright-pre-commit
+  rev: v1.1.406
+  hooks:
+  - id: pyright
+- repo: https://github.com/PyCQA/bandit
+  rev: 1.8.6
+  hooks:
+  - id: bandit
+    args:
+    - -q
+    - -r
+    - src
+    - --exclude
+    - .venv,venv,tests
+    pass_filenames: false

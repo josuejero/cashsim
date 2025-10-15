@@ -38,7 +38,8 @@ dev = [
 ,
   "MonkeyType",
   "pre-commit",
-  "bandit"
+  "bandit",
+  "hypothesis>=6.112"
 ]
 
 [project.scripts]
@@ -47,7 +48,9 @@ cashsim = "cashsim.cli:main"
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+force-exclude = true
 
+extend-exclude = ["typings/**", "**/*.pyi"]
 [tool.ruff.lint]
 select = [
   "E", "F",   # pyflakes/pycodestyle
@@ -71,3 +74,10 @@ typeCheckingMode = "strict"
 [tool.hatch.build.targets.wheel]
 packages = ["src/cashsim"]
 sources = ["src"]
+
+[tool.ruff.lint.flake8-annotations]
+allow-star-arg-any = true
+
+[tool.ruff.lint.per-file-ignores]
+"typings/**" = ["ALL"]
+"**/*.pyi" = ["ALL"]

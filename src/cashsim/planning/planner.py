@@ -167,29 +167,16 @@ def plan_variable_daily_earnings(
     days: int = 60,
     safety_target: Literal["zero", "cushion"] = "zero",
     daily_cap: float | None = None,
-    future_daily_hint: float | None = None,
+    future_daily_hint: float | None = None,  # <-- stays Optional
     blackout_dates: Iterable[date] | None = None,
     tol: float = 0.01,
 ) -> DailyPlanResult:
-    """
-    Greedy day-by-day plan.
-
-    For each day t, we solve the smallest earn_t so that after:
-      - gas skim & any fill-ups (per your gas settings)
-      - paying today's non-debt bills, CC mins, IOU mins, and one-offs due today
-    the end-of-day balance satisfies:
-
-        end_balance >= base + reserve_next_7_days(tomorrow..+6)
-
-    If day t is in blackout_dates, earn_t is forced to 0.
-    """
     start = start or date.today()
     days = max(1, int(days))
-    future_daily_hint = float(
-        future_daily_hint if future_daily_hint is not None else dials.weekday_earnings
-    )
 
-    # Working copies of state
+    # Resolve the optional, then use the resolved value everywhere.
+    fh: float | None = future_daily_hint
+    future_hint: float = float(fh) if fh is not None else float(dials.weekday_earnings)
     balance = float(dials.current_cash)
     gas_bucket = 0.0
     cards: list[CreditCard] = [CreditCard(**c.model_dump()) for c in dials.credit_cards]
@@ -219,33 +206,51 @@ def plan_variable_daily_earnings(
         iou_min_peek = _iou_mins_due_today(day, ious_snapshot)
         oneoffs_today_peek = sum(o.amount for o in oneoffs if o.due_date == day)
 
-        def end_bal_if(earn: float) -> tuple[float, float, float]:
+        def end_bal_if(
+            earn: float,
+            *,
+            _balance: float = balance,
+            _gas_bucket: float = gas_bucket,
+            _nondebt: float = nondebt_today,
+            _cc_min: float = cc_min_peek,
+            _iou_min: float = iou_min_peek,
+            _oneoffs_due: float = oneoffs_today_peek,
+        ) -> tuple[float, float, float]:
             """End-of-day balance if we earned 'earn' today (no mutation of real state)."""
-            b = balance
-            g = gas_bucket
             b2, g2, fills = apply_gas_skim_and_fillups(
-                b, g, earn, dials.gas_pct, dials.gas_fill_size
+                _balance, _gas_bucket, earn, dials.gas_pct, dials.gas_fill_size
             )
             gas_fill_cost = fills * dials.gas_fill_size
-            b2 -= nondebt_today
-            b2 -= cc_min_peek
-            b2 -= iou_min_peek
-            b2 -= oneoffs_today_peek
+            b2 -= _nondebt
+            b2 -= _cc_min
+            b2 -= _iou_min
+            b2 -= _oneoffs_due
             return round(b2, 2), round(g2, 2), round(gas_fill_cost, 2)
 
-        def reserve_need_after(earn: float) -> tuple[float, float, float, float, float]:
-            """Compute tomorrow's 7-day reserve need after earning 'earn' and paying today's items."""
+        def reserve_need_after(
+            earn: float,
+            *,
+            _day: date = day,
+            _cards: list[CreditCard] = cards,
+            _ious: list[IOU] = ious,
+            _oneoffs: list[OneOff] = oneoffs,
+            _bills: list[Bill] = bills,
+            _future_hint: float = future_hint,  # << use the non-optional value
+            _gas_pct: float = float(dials.gas_pct),
+            _fill_size: float = float(dials.gas_fill_size),
+        ) -> tuple[float, float, float, float, float]:
+            """Tomorrow's 7-day reserve need after earning 'earn' and paying today's items."""
             b2, g2, _ = end_bal_if(earn)
 
-            # Build next-state snapshots reflecting that today's mins/oneoffs will be paid
-            cards_next = [CreditCard(**c.model_dump()) for c in cards]
-            ious_next = [IOU(**x.model_dump()) for x in ious]
-            oneoffs_next = [OneOff(**o.model_dump()) for o in oneoffs]
-            _ = _pay_today_side_effects(day, cards_next, ious_next, oneoffs_next)
+            # next-state snapshots (reflect today's mins/one-offs as paid)
+            cards_next = [CreditCard(**c.model_dump()) for c in _cards]
+            ious_next = [IOU(**x.model_dump()) for x in _ious]
+            oneoffs_next = [OneOff(**o.model_dump()) for o in _oneoffs]
+            _ = _pay_today_side_effects(_day, cards_next, ious_next, oneoffs_next)
 
             total7, bills7, mins7, gas7 = reserve_next_7_days(
-                day,
-                bills=bills,
+                _day,
+                bills=_bills,
                 cards=cards_next,
                 ious=ious_next,
                 oneoffs=oneoffs_next,
@@ -254,9 +259,9 @@ def plan_variable_daily_earnings(
                 locked_due_dates=None,
                 oneoff_saved=None,
                 gas_bucket=g2,
-                daily_earn=future_daily_hint,
-                gas_pct=dials.gas_pct,
-                fill_size=dials.gas_fill_size,
+                daily_earn=_future_hint,  # << already float
+                gas_pct=_gas_pct,
+                fill_size=_fill_size,
             )
             base = 0.0 if safety_target == "zero" else float(dials.safety_cushion)
             need = base + total7
@@ -328,7 +333,7 @@ def plan_variable_daily_earnings(
             locked_due_dates=None,
             oneoff_saved=None,
             gas_bucket=g2,
-            daily_earn=future_daily_hint,
+            daily_earn=future_hint,  # << not future_daily_hint
             gas_pct=dials.gas_pct,
             fill_size=dials.gas_fill_size,
         )

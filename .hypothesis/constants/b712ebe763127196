@@ -1,0 +1,4 @@
+# file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/sim/events.py
+# hypothesis_version: 6.140.3
+
+[0.0, 'account', 'date', 'extra_paid', 'finance_charge', 'minimum_paid', 'new_balance', 'reserve_7d_bills', 'reserve_7d_gas', 'reserve_7d_mins', 'reserve_needed', 'surplus_used']

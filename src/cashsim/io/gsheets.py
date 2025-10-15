@@ -7,7 +7,7 @@ import google.auth
 import gspread
 import pandas as pd
 import streamlit as st
-from google.auth.credentials import Credentials  # Application Default Credentials (ADC)
+from google.auth.credentials import Credentials  # base interface
 from google.oauth2 import service_account
 from gspread_dataframe import (  # type: ignore[reportMissingTypeStubs]
     get_as_dataframe,
@@ -24,12 +24,14 @@ def _choose_creds(*, readonly: bool, sa_info: Mapping[str, Any] | None) -> Crede
     """Prefer st.secrets if provided; otherwise fall back to ADC (keyless on GCP)."""
     scopes = SHEETS_READONLY if readonly else SHEETS_RW
     if sa_info:
+        # Accept dict-like service account info (e.g., from secrets or env) and scope it.
         return service_account.Credentials.from_service_account_info(dict(sa_info), scopes=scopes)
     if "gcp_service_account" in st.secrets:
         return service_account.Credentials.from_service_account_info(
             dict(st.secrets["gcp_service_account"]), scopes=scopes
         )
-    creds, _ = google.auth.default(scopes=scopes)  # uses attached service account on GCP
+    # On GCP, this uses the attached service account; locally it can pick up user creds.
+    creds, _ = google.auth.default(scopes=scopes)
     return creds
 
 

@@ -2,7 +2,7 @@ name: CI you can trust
 
 on:
   push:
-    branches: ['**']
+    branches: ["**"]
   pull_request:
 
 permissions:
@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.10', '3.11', '3.12']
+        python-version: ["3.10", "3.11", "3.12"]
 
     steps:
       - name: Checkout
@@ -24,7 +24,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'pip'
+          cache: "pip"
           # make caching robust when you add/rename files
           cache-dependency-path: |
             pyproject.toml
@@ -35,7 +35,7 @@ jobs:
 
       # Install the tooling we need for lint, types, and tests
       - name: Install CI tooling
-        run: pip install ruff mypy pyright pytest
+        run: pip install ruff mypy pyright pytest pandas-stubs types-python-dateutil hypothesis
 
       # The project uses a src/ layout; expose it without installing the package
       - name: Expose src/ on PYTHONPATH

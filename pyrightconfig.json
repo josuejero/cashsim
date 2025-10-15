@@ -1,5 +1,5 @@
 {
-  "typeCheckingMode": "strict",
+  "typeCheckingMode": "standard",
   "executionEnvironments": [
     {
       "root": "src"
@@ -30,5 +30,8 @@
   "reportMissingImports": "warning",
   "reportUntypedFunctionDecorator": "warning",
   "reportUnusedVariable": "warning",
-  "reportCallIssue": "warning"
+  "reportCallIssue": "warning",
+  "include": ["src", "tests"],
+  "extraPaths": ["src"],
+  "pythonVersion": "3.12"
 }

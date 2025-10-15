@@ -1,2 +1,7 @@
 config.json
 bobbie_config.json
+
+.streamlit/
+
+# Streamlit secrets
+.streamlit/

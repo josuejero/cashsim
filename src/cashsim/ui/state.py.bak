@@ -1,0 +1,131 @@
+from __future__ import annotations
+
+from datetime import date
+import pandas as pd
+import streamlit as st
+
+from cashsim.models import Bill, CreditCard, Dials, IOU, InvestmentSettings, OneOff
+
+DEFAULT_BILLS_DF = pd.DataFrame(
+    [
+        {"name": "Rent", "usual_day": 1, "amount": 1200.0},
+        {"name": "Car insurance", "usual_day": 15, "amount": 120.0},
+        {"name": "Phone", "usual_day": 20, "amount": 60.0},
+    ]
+)
+DEFAULT_CC_DF = pd.DataFrame(
+    [
+        {
+            "name": "Chase VISA",
+            "apr": 0.2499,
+            "balance": 1200.0,
+            "due_day": 24,
+            "min_pct": 0.02,
+            "min_floor": 25.0,
+            "statement_day": None,
+        }
+    ]
+)
+DEFAULT_IOU_DF = pd.DataFrame(
+    [
+        {
+            "name": "Friend",
+            "balance": 0.0,
+            "apr": 0.0,
+            "due_day": None,
+            "min_pct": 0.0,
+            "min_floor": 0.0,
+        }
+    ]
+)
+DEFAULT_ONEOFF_DF = pd.DataFrame(
+    [
+        {
+            "name": "Inspection",
+            "due_date": date.today(),
+            "amount": 35.0,
+            "priority": 1,
+            "must_pay": True,
+        }
+    ]
+)
+
+
+def init_session_once() -> None:
+    st.session_state.setdefault("current_cash", 1200.0)
+    st.session_state.setdefault("safety_cushion", 300.0)
+    st.session_state.setdefault("weekday_earnings", 150.0)
+    st.session_state.setdefault("gas_pct", 0.2)
+    st.session_state.setdefault("gas_fill_size", 45.0)
+    st.session_state.setdefault("bill_table", DEFAULT_BILLS_DF.copy())
+    st.session_state.setdefault("cc_table", DEFAULT_CC_DF.copy())
+    st.session_state.setdefault("iou_table", DEFAULT_IOU_DF.copy())
+    st.session_state.setdefault("oneoff_table", DEFAULT_ONEOFF_DF.copy())
+    st.session_state.setdefault("invest", InvestmentSettings().model_dump())
+    st.session_state.setdefault("interest_mode", "statement_adb")
+    st.session_state.setdefault("extra_strategy", "avalanche")
+    st.session_state.setdefault(
+        "blackouts_df", pd.DataFrame({"date": pd.Series([], dtype="datetime64[ns]")})
+    )
+
+
+def _coerce_date(v):
+    if isinstance(v, date):
+        return v
+    if v is None or (isinstance(v, float) and pd.isna(v)):
+        raise ValueError("one-off due_date is required")
+    return pd.to_datetime(v).date()
+
+
+def _none_if_nan(v):
+    if v is None:
+        return None
+    try:
+        if pd.isna(v):
+            return None
+    except Exception:
+        pass
+    return v
+
+
+def dials_from_state() -> Dials:
+    bills = [Bill(**row) for row in st.session_state["bill_table"].to_dict(orient="records")]
+
+    clean_cc_rows = []
+    for row in st.session_state["cc_table"].to_dict(orient="records"):
+        row = dict(row)
+        row["statement_day"] = _none_if_nan(row.get("statement_day"))
+        clean_cc_rows.append(row)
+    cards = [CreditCard(**row) for row in clean_cc_rows]
+
+    clean_iou_rows = []
+    for row in st.session_state["iou_table"].to_dict(orient="records"):
+        row = dict(row)
+        row["due_day"] = _none_if_nan(row.get("due_day"))
+        clean_iou_rows.append(row)
+    ious = [IOU(**row) for row in clean_iou_rows]
+
+    oneoffs = [
+        OneOff(**{**row, "due_date": _coerce_date(row["due_date"])})
+        for row in st.session_state["oneoff_table"].to_dict(orient="records")
+    ]
+
+    blackouts: list[date] = []
+    for v in st.session_state.get("blackouts_df", pd.DataFrame({"date": []}))["date"]:
+        if pd.notna(v):
+            blackouts.append(pd.to_datetime(v).date())
+
+    return Dials(
+        current_cash=st.session_state["current_cash"],
+        safety_cushion=st.session_state["safety_cushion"],
+        weekday_earnings=st.session_state["weekday_earnings"],
+        gas_pct=st.session_state["gas_pct"],
+        gas_fill_size=st.session_state["gas_fill_size"],
+        bills=bills,
+        credit_cards=cards,
+        ious=ious,
+        oneoffs=oneoffs,
+        invest=InvestmentSettings(**st.session_state["invest"]),
+        interest_mode=st.session_state["interest_mode"],
+        extra_strategy=st.session_state["extra_strategy"],
+    )

@@ -1,13 +1,34 @@
 {
-  "typeCheckingMode": "basic",
-  "venv": ".venv",
-  "exclude": ["**/.venv/**", "**/.git/**", "**/__pycache__/**"],
-  "reportUnknownParameterType": "error",
-  "reportUnknownArgumentType": "error",
-  "reportUnknownMemberType": "error",
-  "reportUnknownVariableType": "error",
-  "reportUnknownLambdaType": "error",
+  "typeCheckingMode": "strict",
   "executionEnvironments": [
-    { "root": "src" }
-  ]
+    {
+      "root": "src"
+    },
+    {
+      "root": "./src"
+    },
+    {
+      "root": "./tests",
+      "extraPaths": [
+        "./src"
+      ]
+    }
+  ],
+  "useLibraryCodeForTypes": true,
+  "reportUnknownVariableType": "warning",
+  "reportUnknownMemberType": "warning",
+  "reportUnknownArgumentType": "warning",
+  "reportUnknownParameterType": "warning",
+  "reportUnknownLambdaType": "warning",
+  "reportMissingTypeStubs": "warning",
+  "reportMissingTypeArgument": "warning",
+  "reportMissingParameterType": "warning",
+  "reportArgumentType": "warning",
+  "reportAttributeAccessIssue": "warning",
+  "venvPath": ".",
+  "venv": ".venv",
+  "reportMissingImports": "warning",
+  "reportUntypedFunctionDecorator": "warning",
+  "reportUnusedVariable": "warning",
+  "reportCallIssue": "warning"
 }

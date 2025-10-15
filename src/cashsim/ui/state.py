@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Any
+
 import pandas as pd
 import streamlit as st
 
-from cashsim.models import Bill, CreditCard, Dials, IOU, InvestmentSettings, OneOff
+from cashsim.models import IOU, Bill, CreditCard, Dials, InvestmentSettings, OneOff
 
 DEFAULT_BILLS_DF = pd.DataFrame(
     [
@@ -65,37 +67,44 @@ def init_session_once() -> None:
     st.session_state.setdefault("interest_mode", "statement_adb")
     st.session_state.setdefault("extra_strategy", "avalanche")
     st.session_state.setdefault(
-    "blackouts_df", pd.DataFrame({"date": pd.Series([], dtype="datetime64[ns]")})
-)
+        "blackouts_df", pd.DataFrame({"date": pd.Series([], dtype="datetime64[ns]")})
+    )
 
 
-def _coerce_date(v):
+def _coerce_date(v: object) -> date:
     if isinstance(v, date):
         return v
     if v is None or (isinstance(v, float) and pd.isna(v)):
         raise ValueError("one-off due_date is required")
-    return pd.to_datetime(v).date()
+    if isinstance(v, (str, float, int)):
+        return pd.to_datetime(str(v)).date()
+    raise ValueError(f"Cannot convert {type(v)} to date")
 
 
-def _none_if_nan(v):
+def _none_if_nan(v: object) -> int | None:
     if v is None:
         return None
     try:
-        if pd.isna(v):
+        if isinstance(v, (float, int)) and pd.isna(v):
             return None
     except Exception:
         pass
-    return v
+    try:
+        if isinstance(v, (int, float, str)):
+            return int(float(v))
+        return None
+    except Exception:
+        return None
 
 
 def dials_from_state() -> Dials:
     bills = [Bill(**row) for row in st.session_state["bill_table"].to_dict(orient="records")]
 
-    clean_cc_rows = []
+    clean_cc_rows: list[dict[str, Any]] = []
     for row in st.session_state["cc_table"].to_dict(orient="records"):
-        row = dict(row)
-        row["statement_day"] = _none_if_nan(row.get("statement_day"))
-        clean_cc_rows.append(row)
+        row_dict = dict(row)
+        row_dict["statement_day"] = _none_if_nan(row_dict.get("statement_day"))
+        clean_cc_rows.append(row_dict)
     cards = [CreditCard(**row) for row in clean_cc_rows]
 
     clean_iou_rows = []
@@ -109,7 +118,7 @@ def dials_from_state() -> Dials:
         OneOff(**{**row, "due_date": _coerce_date(row["due_date"])})
         for row in st.session_state["oneoff_table"].to_dict(orient="records")
     ]
-    
+
     blackouts: list[date] = []
     for v in st.session_state.get("blackouts_df", pd.DataFrame({"date": []}))["date"]:
         if pd.notna(v):

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -24,7 +24,7 @@ class CreditCard(BaseModel):
     due_day: int = Field(ge=1, le=31, description="Payment due day")
     min_pct: float = Field(ge=0, le=1, description="e.g. 0.02 for 2%")
     min_floor: float = Field(ge=0, description="absolute floor, e.g. $25")
-    statement_day: Optional[int] = Field(
+    statement_day: int | None = Field(
         default=None,
         ge=1,
         le=31,
@@ -36,7 +36,7 @@ class IOU(BaseModel):
     name: str = Field(min_length=1)
     balance: float = Field(ge=0)
     apr: float = Field(ge=0, description="APR decimal; 0.0 if no interest")
-    due_day: Optional[int] = Field(default=None, ge=1, le=31)
+    due_day: int | None = Field(default=None, ge=1, le=31)
     min_pct: float = Field(default=0.0, ge=0, le=1)
     min_floor: float = Field(default=0.0, ge=0)
 

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Dict, List, Tuple
 
 
 def add_finance_event(
-    events: List[dict], day: date, account: str, amt: float, new_balance: float
+    events: list[dict], day: date, account: str, amt: float, new_balance: float
 ) -> None:
     events.append(
         {
@@ -20,7 +19,7 @@ def add_finance_event(
 
 
 def add_min_event(
-    events: List[dict], day: date, account: str, amt: float, new_balance: float
+    events: list[dict], day: date, account: str, amt: float, new_balance: float
 ) -> None:
     events.append(
         {
@@ -35,7 +34,7 @@ def add_min_event(
 
 
 def add_extra_event(
-    events: List[dict],
+    events: list[dict],
     day: date,
     account: str,
     extra: float,

@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 
 
-def number_dials():
+def number_dials() -> None:
     col1, col2 = st.columns(2)
     col1.number_input("current cash", min_value=0.0, step=50.0, key="current_cash")
     col2.number_input("safety cushion", min_value=0.0, step=25.0, key="safety_cushion")
@@ -16,7 +16,7 @@ def number_dials():
     st.number_input("gas fill-up size", min_value=1.0, step=1.0, key="gas_fill_size")
 
 
-def strategy_toggles():
+def strategy_toggles() -> None:
     st.selectbox(
         "Interest calculation",
         ["statement_adb", "due_simple"],
@@ -31,7 +31,7 @@ def strategy_toggles():
     )
 
 
-def bills_editor(df: pd.DataFrame, key="bill_editor") -> pd.DataFrame:
+def bills_editor(df: pd.DataFrame, key: str | int | None = "bill_editor") -> pd.DataFrame:
     return st.data_editor(
         df,
         num_rows="dynamic",
@@ -47,7 +47,7 @@ def bills_editor(df: pd.DataFrame, key="bill_editor") -> pd.DataFrame:
     )
 
 
-def cc_editor(df: pd.DataFrame, key="cc_editor") -> pd.DataFrame:
+def cc_editor(df: pd.DataFrame, key: str | int | None = "cc_editor") -> pd.DataFrame:
     return st.data_editor(
         df,
         num_rows="dynamic",
@@ -71,7 +71,7 @@ def cc_editor(df: pd.DataFrame, key="cc_editor") -> pd.DataFrame:
     )
 
 
-def iou_editor(df: pd.DataFrame, key="iou_editor") -> pd.DataFrame:
+def iou_editor(df: pd.DataFrame, key: str | int | None = "iou_editor") -> pd.DataFrame:
     return st.data_editor(
         df,
         num_rows="dynamic",
@@ -92,14 +92,14 @@ def iou_editor(df: pd.DataFrame, key="iou_editor") -> pd.DataFrame:
     )
 
 
-def oneoff_editor(df: pd.DataFrame, key="oneoff_editor") -> pd.DataFrame:
+def oneoff_editor(df: pd.DataFrame, key: str | int | None = "oneoff_editor") -> pd.DataFrame:
     return st.data_editor(
         df,
         num_rows="dynamic",
         width="stretch",
         column_config={
             "name": st.column_config.TextColumn("name"),
-            "due_date": st.column_config.DateColumn("due date"),
+            "due_date": st.column_config.DateColumn("due date", format="iso8601"),
             "amount": st.column_config.NumberColumn("amount", min_value=0.0, step=1.0),
             "priority": st.column_config.NumberColumn(
                 "priority (higher=faster)", min_value=0, max_value=99, step=1

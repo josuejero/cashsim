@@ -32,10 +32,10 @@ jobs:
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
 
-      # Install tooling everywhere; skip installing the package on 3.10/3.11
+      # Install core tooling on all versions; include hypothesis so mypy can import tests on 3.10/3.11
       - name: Install tooling (no project install on 3.10/3.11)
         run: |
-          pip install ruff mypy pyright pytest
+          pip install ruff mypy pyright pytest hypothesis
           pip install pandas-stubs types-python-dateutil typing-extensions
 
       - name: Expose src/ on PYTHONPATH

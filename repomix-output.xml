@@ -725,33 +725,6 @@ def test_adb_identity_property(daily: list[Decimal], apr: Decimal) -> None:
 cashsim.utils.money
 </file>
 
-<file path="mypy.ini">
-# mypy.ini
-[mypy]
-python_version = 3.10
-warn_unused_ignores = True
-
-# Third-party packages that aren’t installed in CI’s 3.10/3.11 jobs.
-[mypy-streamlit.*]
-ignore_missing_imports = True
-
-[mypy-gspread.*]
-ignore_missing_imports = True
-
-[mypy-google.*]
-ignore_missing_imports = True
-
-[mypy-gspread_dataframe.*]
-ignore_missing_imports = True
-
-[mypy-pydantic.*]
-ignore_missing_imports = True
-
-# If your code imports typing_extensions on 3.10
-[mypy-typing_extensions.*]
-ignore_missing_imports = True
-</file>
-
 <file path="patch.diff">
 *** Begin Patch
 *** Update File: src/cashsim/utils/money.py
@@ -1168,6 +1141,32 @@ class Dials(BaseModel):
 # tmp/
 .streamlit/secrets.toml
 monkeytype.sqlite3
+</file>
+
+<file path="mypy.ini">
+# mypy.ini
+[mypy]
+python_version = 3.12
+warn_unused_ignores = True
+
+# Third-party packages that aren’t always present in CI.
+[mypy-streamlit.*]
+ignore_missing_imports = True
+
+[mypy-gspread.*]
+ignore_missing_imports = True
+
+[mypy-google.*]
+ignore_missing_imports = True
+
+[mypy-gspread_dataframe.*]
+ignore_missing_imports = True
+
+[mypy-pydantic.*]
+ignore_missing_imports = True
+
+[mypy-typing_extensions.*]
+ignore_missing_imports = True
 </file>
 
 <file path="src/cashsim/analytics/snapshot.py">
@@ -2032,72 +2031,6 @@ repos:
     pass_filenames: false
 </file>
 
-<file path=".github/workflows/ci.yml">
-name: CI you can trust
-
-on:
-  push:
-    branches: ["**"]
-  pull_request:
-
-permissions:
-  contents: read
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.11", "3.12"]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }} (with pip cache)
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: "pip"
-          # make caching robust when you add/rename files
-          cache-dependency-path: |
-            pyproject.toml
-            requirements*.txt
-
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip
-
-      # Install the tooling we need for lint, types, and tests
-      - name: Install project (deps) + tooling
-        run: |
-          pip install -e .[dev]
-          pip install ruff mypy pyright pytest
-      - name: Expose src/ on PYTHONPATH
-        run: echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
-
-      # Optional: install the project on the version that matches pyproject's floor (>=3.12)
-      - name: Editable install on 3.12
-        if: matrix.python-version == '3.12'
-        run: pip install -e .
-
-      - name: Ruff (lint)
-        run: ruff check .
-        # For PR annotations, you can add: --output-format=github
-
-      - name: Pyright (type check)
-        run: pyright
-
-      - name: Mypy (type check)
-        run: mypy .
-
-      - name: Install runtime deps (quick workaround)
-        run: pip install pandas
-
-      - name: Pytest
-        run: pytest -q
-</file>
-
 <file path="src/cashsim/planning/planner.py">
 from __future__ import annotations
 
@@ -2629,21 +2562,83 @@ bobbie_config.json
 .streamlit/
 </file>
 
+<file path=".github/workflows/ci.yml">
+name: CI you can trust
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }} (with pip cache)
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+          cache-dependency-path: |
+            pyproject.toml
+            requirements*.txt
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      # Install tooling everywhere; skip installing the package on 3.10/3.11
+      - name: Install tooling (no project install on 3.10/3.11)
+        run: |
+          pip install ruff mypy pyright pytest
+          pip install pandas-stubs types-python-dateutil typing-extensions
+
+      - name: Expose src/ on PYTHONPATH
+        run: echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
+
+      # Only install the project on the supported version
+      - name: Install project (editable) on 3.12 only
+        if: matrix.python-version == '3.12'
+        run: pip install -e ".[dev]"
+
+      - name: Install runtime deps for tests (3.12 only)
+        if: matrix.python-version == '3.12'
+        run: pip install pandas
+
+      - name: Ruff (lint)
+        run: ruff check .
+
+      - name: Pyright (type check)
+        run: pyright
+
+      - name: Mypy (type check)
+        run: mypy .
+
+      # Run tests only where the package can actually be installed
+      - name: Pytest (3.12 only)
+        if: matrix.python-version == '3.12'
+        run: pytest -q
+</file>
+
 <file path="pyrightconfig.json">
 {
   "typeCheckingMode": "standard",
   "executionEnvironments": [
-    {
-      "root": "src"
-    },
-    {
-      "root": "./src"
-    },
+    { "root": "src" },
+    { "root": "./src" },
     {
       "root": "./tests",
-      "extraPaths": [
-        "./src"
-      ]
+      "extraPaths": ["./src"]
     }
   ],
   "useLibraryCodeForTypes": true,
@@ -2657,8 +2652,6 @@ bobbie_config.json
   "reportMissingParameterType": "warning",
   "reportArgumentType": "warning",
   "reportAttributeAccessIssue": "warning",
-  "venvPath": ".",
-  "venv": ".venv",
   "reportMissingImports": "warning",
   "reportUntypedFunctionDecorator": "warning",
   "reportUnusedVariable": "warning",
@@ -2667,143 +2660,6 @@ bobbie_config.json
   "extraPaths": ["src"],
   "pythonVersion": "3.12"
 }
-</file>
-
-<file path="src/cashsim/io/gsheets.py">
-from __future__ import annotations
-
-from collections.abc import Mapping
-from typing import Any, cast
-
-import google.auth
-import gspread
-import pandas as pd
-import streamlit as st
-from google.auth.credentials import Credentials  # base interface
-from google.oauth2 import service_account
-from gspread_dataframe import (
-    get_as_dataframe,
-    set_with_dataframe,
-)
-
-from cashsim._typing_shims import cache_data, cache_resource
-
-SHEETS_READONLY = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
-SHEETS_RW = ["https://www.googleapis.com/auth/spreadsheets"]
-
-
-def _choose_creds(*, readonly: bool, sa_info: Mapping[str, Any] | None) -> Credentials:
-    """Prefer st.secrets if provided; otherwise fall back to ADC (keyless on GCP)."""
-    scopes = SHEETS_READONLY if readonly else SHEETS_RW
-    if sa_info:
-        # Accept dict-like service account info (e.g., from secrets or env) and scope it.
-        return service_account.Credentials.from_service_account_info(dict(sa_info), scopes=scopes)
-    if "gcp_service_account" in st.secrets:
-        return service_account.Credentials.from_service_account_info(
-            dict(st.secrets["gcp_service_account"]), scopes=scopes
-        )
-    # On GCP, this uses the attached service account; locally it can pick up user creds.
-    creds, _ = google.auth.default(scopes=scopes)
-    return creds
-
-
-@cache_resource(show_spinner=False)
-def gs_client(sa_info: Mapping[str, Any] | None = None, *, readonly: bool = True) -> gspread.Client:
-    """Singleton gspread client; cached across reruns & sessions."""
-    creds = _choose_creds(readonly=readonly, sa_info=sa_info)
-    return gspread.authorize(creds)
-
-
-# ---------- FAST READ: batch ranges in one HTTP call ----------
-@cache_data(show_spinner=False)
-def batch_read_values(
-    sheet_url: str, ranges: list[str], sa_info: Mapping[str, Any] | None = None
-) -> dict[str, list[list[Any]]]:
-    """
-    Read multiple A1 ranges across sheets in one call via values:batchGet.
-    Returns {range: values}. Missing ranges return [].
-    """
-    sh: gspread.Spreadsheet = gs_client(sa_info, readonly=True).open_by_url(sheet_url)
-    resp: dict[str, Any] = sh.values_batch_get(ranges)
-    out: dict[str, list[list[Any]]] = {}
-    for vr in resp.get("valueRanges", []):
-        out[vr.get("range", "")] = vr.get("values", [])
-    # ensure all requested ranges are present (possibly empty)
-    for r in ranges:
-        out.setdefault(r, [])
-    return out
-
-
-# ---------- FAST WRITE: batch updates in one HTTP call ----------
-def batch_write_values(
-    sheet_url: str,
-    value_ranges: list[dict[str, Any]],
-    *,
-    value_input_option: str = "USER_ENTERED",
-    sa_info: Mapping[str, Any] | None = None,
-) -> dict:
-    """
-    Write multiple ranges in one call via values:batchUpdate.
-    value_ranges = [{"range": "Sheet1!A1:B3", "values": [[...], ...]}, ...]
-    """
-    sh: gspread.Spreadsheet = gs_client(sa_info, readonly=False).open_by_url(sheet_url)
-    body = {"valueInputOption": value_input_option, "data": value_ranges}
-    return sh.values_batch_update(body)
-
-
-# ---------- Convenience: read a wishlist tab the old way (kept for UI call site) ----------
-@cache_data(show_spinner=False)
-def read_wishlist_by_url(
-    sheet_url: str, worksheet_name: str, sa_info: Mapping[str, Any] | None = None
-) -> pd.DataFrame:
-    """
-    Read a wishlist sheet into a DataFrame using batched client.
-    Expected columns:
-      - Item, Category, Price, Name, Days I have to Buy Again, Priority
-    """
-    client = gs_client(sa_info, readonly=True)
-    ws = client.open_by_url(sheet_url).worksheet(worksheet_name)
-    df_any = get_as_dataframe(ws, evaluate_formulas=True, header=0).dropna(how="all")
-    df: pd.DataFrame = cast(pd.DataFrame, df_any)
-
-    wanted = ["Item", "Category", "Price", "Name", "Days I have to Buy Again", "Priority"]
-    missing = [c for c in wanted if c not in df.columns]
-    if missing:
-        raise ValueError(f"Missing columns: {missing}")
-
-    df["Price"] = pd.to_numeric(df["Price"], errors="coerce").fillna(0.0)
-    df["Priority"] = (
-        pd.to_numeric(df["Priority"], downcast="integer", errors="coerce").fillna(0).astype(int)
-    )
-    df["Days I have to Buy Again"] = (
-        pd.to_numeric(df["Days I have to Buy Again"], errors="coerce").fillna(0).astype(int)
-    )
-    return df[wanted]
-
-
-# ---------- Convenience: write a DataFrame in (usually) a single update ----------
-def write_dataframe(
-    sheet_url: str,
-    worksheet_name: str,
-    df: pd.DataFrame,
-    *,
-    clear_first: bool = True,
-    sa_info: Mapping[str, Any] | None = None,
-) -> None:
-    """Clear+set a DataFrame using one or two value-range calls (fast)."""
-    client: gspread.Client = gs_client(sa_info, readonly=False)
-    ws: gspread.Worksheet = client.open_by_url(sheet_url).worksheet(worksheet_name)
-    if clear_first:
-        ws.clear()
-    set_with_dataframe(ws, df, include_index=False, include_column_header=True, resize=True)
-
-
-@cache_data(show_spinner=False)  # cache raw transaction pull
-def load_transactions(sheet_url: str) -> pd.DataFrame:
-    gc = gs_client(sa_info=None, readonly=True)
-    ws = gc.open_by_url(sheet_url).worksheet("Sheet1")
-    values = ws.get_all_records()
-    return pd.DataFrame(values)
 </file>
 
 <file path="src/cashsim/ui/streamlit_app.py">
@@ -3506,6 +3362,143 @@ allow-star-arg-any = true
 "typings/**" = ["ALL"]
 "**/*.pyi" = ["ALL"]
 "src/cashsim/sim/types.py" = ["UP"]
+</file>
+
+<file path="src/cashsim/io/gsheets.py">
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any, cast
+
+import google.auth
+import gspread
+import pandas as pd
+import streamlit as st
+from google.auth.credentials import Credentials  # base interface
+from google.oauth2 import service_account
+from gspread_dataframe import (
+    get_as_dataframe,
+    set_with_dataframe,
+)
+
+from cashsim._typing_shims import cache_data, cache_resource
+
+SHEETS_READONLY = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+SHEETS_RW = ["https://www.googleapis.com/auth/spreadsheets"]
+
+
+def _choose_creds(*, readonly: bool, sa_info: Mapping[str, Any] | None) -> Credentials:
+    """Prefer st.secrets if provided; otherwise fall back to ADC (keyless on GCP)."""
+    scopes = SHEETS_READONLY if readonly else SHEETS_RW
+    if sa_info:
+        # Accept dict-like service account info (e.g., from secrets or env) and scope it.
+        return service_account.Credentials.from_service_account_info(dict(sa_info), scopes=scopes)
+    if "gcp_service_account" in st.secrets:
+        return service_account.Credentials.from_service_account_info(
+            dict(st.secrets["gcp_service_account"]), scopes=scopes
+        )
+    # On GCP, this uses the attached service account; locally it can pick up user creds.
+    creds, _ = google.auth.default(scopes=scopes)
+    return cast(Credentials, creds)
+
+
+@cache_resource(show_spinner=False)
+def gs_client(sa_info: Mapping[str, Any] | None = None, *, readonly: bool = True) -> gspread.Client:
+    """Singleton gspread client; cached across reruns & sessions."""
+    creds = _choose_creds(readonly=readonly, sa_info=sa_info)
+    return gspread.authorize(creds)
+
+
+# ---------- FAST READ: batch ranges in one HTTP call ----------
+@cache_data(show_spinner=False)
+def batch_read_values(
+    sheet_url: str, ranges: list[str], sa_info: Mapping[str, Any] | None = None
+) -> dict[str, list[list[Any]]]:
+    """
+    Read multiple A1 ranges across sheets in one call via values:batchGet.
+    Returns {range: values}. Missing ranges return [].
+    """
+    sh: gspread.Spreadsheet = gs_client(sa_info, readonly=True).open_by_url(sheet_url)
+    resp: dict[str, Any] = sh.values_batch_get(ranges)
+    out: dict[str, list[list[Any]]] = {}
+    for vr in resp.get("valueRanges", []):
+        out[vr.get("range", "")] = vr.get("values", [])
+    # ensure all requested ranges are present (possibly empty)
+    for r in ranges:
+        out.setdefault(r, [])
+    return out
+
+
+# ---------- FAST WRITE: batch updates in one HTTP call ----------
+def batch_write_values(
+    sheet_url: str,
+    value_ranges: list[dict[str, Any]],
+    *,
+    value_input_option: str = "USER_ENTERED",
+    sa_info: Mapping[str, Any] | None = None,
+) -> dict:
+    """
+    Write multiple ranges in one call via values:batchUpdate.
+    value_ranges = [{"range": "Sheet1!A1:B3", "values": [[...], ...]}, ...]
+    """
+    sh: gspread.Spreadsheet = gs_client(sa_info, readonly=False).open_by_url(sheet_url)
+    body = {"valueInputOption": value_input_option, "data": value_ranges}
+    return sh.values_batch_update(body)
+
+
+# ---------- Convenience: read a wishlist tab the old way (kept for UI call site) ----------
+@cache_data(show_spinner=False)
+def read_wishlist_by_url(
+    sheet_url: str, worksheet_name: str, sa_info: Mapping[str, Any] | None = None
+) -> pd.DataFrame:
+    """
+    Read a wishlist sheet into a DataFrame using batched client.
+    Expected columns:
+      - Item, Category, Price, Name, Days I have to Buy Again, Priority
+    """
+    client = gs_client(sa_info, readonly=True)
+    ws = client.open_by_url(sheet_url).worksheet(worksheet_name)
+    df_any = get_as_dataframe(ws, evaluate_formulas=True, header=0).dropna(how="all")
+    df: pd.DataFrame = cast(pd.DataFrame, df_any)
+
+    wanted = ["Item", "Category", "Price", "Name", "Days I have to Buy Again", "Priority"]
+    missing = [c for c in wanted if c not in df.columns]
+    if missing:
+        raise ValueError(f"Missing columns: {missing}")
+
+    df["Price"] = pd.to_numeric(df["Price"], errors="coerce").fillna(0.0)
+    df["Priority"] = (
+        pd.to_numeric(df["Priority"], downcast="integer", errors="coerce").fillna(0).astype(int)
+    )
+    df["Days I have to Buy Again"] = (
+        pd.to_numeric(df["Days I have to Buy Again"], errors="coerce").fillna(0).astype(int)
+    )
+    return df[wanted]
+
+
+# ---------- Convenience: write a DataFrame in (usually) a single update ----------
+def write_dataframe(
+    sheet_url: str,
+    worksheet_name: str,
+    df: pd.DataFrame,
+    *,
+    clear_first: bool = True,
+    sa_info: Mapping[str, Any] | None = None,
+) -> None:
+    """Clear+set a DataFrame using one or two value-range calls (fast)."""
+    client: gspread.Client = gs_client(sa_info, readonly=False)
+    ws: gspread.Worksheet = client.open_by_url(sheet_url).worksheet(worksheet_name)
+    if clear_first:
+        ws.clear()
+    set_with_dataframe(ws, df, include_index=False, include_column_header=True, resize=True)
+
+
+@cache_data(show_spinner=False)  # cache raw transaction pull
+def load_transactions(sheet_url: str) -> pd.DataFrame:
+    gc = gs_client(sa_info=None, readonly=True)
+    ws = gc.open_by_url(sheet_url).worksheet("Sheet1")
+    values = ws.get_all_records()
+    return pd.DataFrame(values)
 </file>
 
 </files>

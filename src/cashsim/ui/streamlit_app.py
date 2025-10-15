@@ -70,32 +70,17 @@ def _load_config_cached(path: str, mtime: float) -> Dials:
     return load_config(path)
 
 
-# ------------------
-# Title & Tabs
-# ------------------
-st.title("CashSim (single-page)")
-st.caption(
-    "Edit inputs, bills, debt, and one-offs — then simulate and analyze break-even, "
-    "and plan a daily target — all here."
-)
-
-tab_inputs, tab_bills, tab_debt, tab_oneoffs, tab_sim, tab_analytics, tab_planner, tab_wishlist = (
-    st.tabs(
-        ["Inputs", "Bills", "Debt", "One-offs", "Simulation", "Analytics", "Planner", "Wishlist"]
-    )
-)
-
-# ------------------
-# Inputs
-# ------------------
-with tab_inputs:
+# ------------
+# Renderers
+# ------------
+def render_inputs_tab() -> None:
     st.header("Inputs")
     st.subheader("Config I/O")
 
     cfg_path = st.text_input("path", value="config.json")
-    c1, c2, _ = st.columns([1, 1, 1])
+    c1, c2, _c3 = st.columns([1, 1, 1])
 
-    if c1.button("Load file", width="stretch"):
+    if c1.button("Load file", use_container_width=True):
         try:
             mtime = os.path.getmtime(cfg_path) if os.path.exists(cfg_path) else 0.0
             d = _load_config_cached(cfg_path, mtime)
@@ -152,10 +137,9 @@ with tab_inputs:
         except Exception as e:
             st.error(str(e))
 
-    # Prepare a Dials for download/save that includes blackouts even if
-    # ui.state.dials_from_state() doesn't
+    # Prepare a Dials for download/save that includes blackouts
     def _dials_with_blackouts() -> Dials:
-        base = dials_from_state()
+        base_dials = dials_from_state()
         # Pull editor dates and coerce to date objects
         bdf = st.session_state.get("blackouts_df", pd.DataFrame({"date": []})).copy()
         if "date" not in bdf.columns:
@@ -164,7 +148,7 @@ with tab_inputs:
         for v in pd.to_datetime(bdf["date"], errors="coerce"):
             if pd.notna(v):
                 dates.append(pd.to_datetime(v).date())
-        return base.model_copy(update={"blackouts": dates})
+        return base_dials.model_copy(update={"blackouts": dates})
 
     st.download_button(
         "Download current config",
@@ -173,7 +157,7 @@ with tab_inputs:
         mime="application/json",
     )
 
-    if c2.button("Save file", width="stretch"):
+    if c2.button("Save file", use_container_width=True):
         try:
             save_config(_dials_with_blackouts(), cfg_path)
             st.success(f"Saved {cfg_path}")
@@ -184,10 +168,8 @@ with tab_inputs:
     number_dials()
     strategy_toggles()
 
-# ------------------
-# Bills
-# ------------------
-with tab_bills:
+
+def render_bills_tab() -> None:
     st.header("Bills")
     st.session_state["bill_table"] = bills_editor(st.session_state["bill_table"])
 
@@ -224,16 +206,14 @@ with tab_bills:
         ["next_due", "type", "name"], kind="mergesort"
     )
     st.subheader("Rolled-forward preview (bills + estimated CC mins)")
-    st.dataframe(rolled_df, width="stretch", hide_index=True)
+    st.dataframe(rolled_df, use_container_width=True, hide_index=True)
     st.caption(
         "CC minimums here are estimates from current balances; "
         "actual mins are locked from statement balances."
     )
 
-# ------------------
-# Debt (CC + IOU) and upcoming events
-# ------------------
-with tab_debt:
+
+def render_debt_tab() -> None:
     st.header("Credit cards & IOUs")
     st.session_state["cc_table"] = cc_editor(st.session_state["cc_table"])
     st.session_state["iou_table"] = iou_editor(st.session_state["iou_table"])
@@ -241,14 +221,16 @@ with tab_debt:
     st.subheader("Upcoming due-date events (interest postings, minimums, extras)")
     dials = dials_from_state()
     fingerprint = _fingerprint(dials)
-    sim_df, _ = run_sim(fingerprint, date.today(), 60)
+    sim_df, _sim_metrics = run_sim(fingerprint, date.today(), 60)
+
+    # Build a flattened view of card events
     ev = sim_df.explode("cc_events", ignore_index=True)
     if bool("cc_events" in ev.columns and ev["cc_events"].notna().any()):
-        base = ev.loc[ev["cc_events"].notna(), ["date", "cc_events"]].reset_index(drop=True)
-        events_df = pd.json_normalize(base["cc_events"].tolist()).reset_index(drop=True)
+        base_df = ev.loc[ev["cc_events"].notna(), ["date", "cc_events"]].reset_index(drop=True)
+        events_df = pd.json_normalize(base_df["cc_events"].tolist()).reset_index(drop=True)
         if "date" in events_df.columns:
             events_df = events_df.rename(columns={"date": "event_date"})
-        events_df.insert(0, "date", base["date"].reset_index(drop=True))
+        events_df.insert(0, "date", base_df["date"].reset_index(drop=True))
         events_df = events_df.loc[:, ~events_df.columns.duplicated()]
         pref = [
             "date",
@@ -265,21 +247,19 @@ with tab_debt:
             "event_date",
         ]
         cols = [c for c in pref if c in events_df.columns]
-        st.dataframe(events_df[cols], width="stretch", hide_index=True)
+        st.dataframe(events_df[cols], use_container_width=True, hide_index=True)
     else:
         st.write("No due-date events within 60 days.")
 
-# ------------------
-# One-offs (sinking)
-# ------------------
-with tab_oneoffs:
+
+def render_oneoffs_tab() -> None:
     st.header("One-off (sinking) expenses")
     st.session_state["oneoff_table"] = oneoff_editor(st.session_state["oneoff_table"])
 
     st.subheader("Contributions & payments (next 60 days)")
     dials = dials_from_state()
     fingerprint = _fingerprint(dials)
-    sim_df, _ = run_sim(fingerprint, date.today(), 60)
+    sim_df, _sim_metrics = run_sim(fingerprint, date.today(), 60)
 
     events: list[dict[str, Any]] = []
     for _, r in sim_df.iterrows():
@@ -300,60 +280,66 @@ with tab_oneoffs:
         oneoff_events_df = (
             pd.DataFrame(events).sort_values(["date", "event", "name"]).reset_index(drop=True)
         )
-        st.dataframe(oneoff_events_df, width="stretch", hide_index=True)
+        st.dataframe(oneoff_events_df, use_container_width=True, hide_index=True)
     else:
         st.write("No one-off contributions or payments in the next 60 days.")
 
-# ------------------
-# Simulation
-# ------------------
-with tab_sim:
+
+def render_sim_tab() -> None:
     st.header("Simulation")
     days = st.slider("days to simulate", min_value=28, max_value=186, value=31, step=1)
     dials = dials_from_state()
     fingerprint = _fingerprint(dials)
-    sim_df, metrics = run_sim(fingerprint, date.today(), days)
+    sim_df, sim_metrics = run_sim(fingerprint, date.today(), days)
 
-    left, right = st.columns([1.2, 1.0])
-    with left:
+    left_col, right_col = st.columns([1.2, 1.0])
+    with left_col:
         st.subheader("Daily balance (projection)")
-        st.line_chart(sim_df.set_index("date")[["balance"]], width="stretch")
-        st.dataframe(stringify_events_columns(sim_df), width="stretch", hide_index=True)
+        st.line_chart(sim_df.set_index("date")[["balance"]], use_container_width=True)
+        st.dataframe(stringify_events_columns(sim_df), use_container_width=True, hide_index=True)
 
-    with right:
+    with right_col:
         st.subheader("Key results")
-        st.metric("Min balance", f"${metrics.min_balance:,.2f}", help=str(metrics.min_balance_date))
+        st.metric(
+            "Min balance",
+            f"${sim_metrics.min_balance:,.2f}",
+            help=str(sim_metrics.min_balance_date),
+        )
         st.metric(
             "Overdraft date",
-            "-" if metrics.first_negative_date is None else str(metrics.first_negative_date),
+            "-"
+            if sim_metrics.first_negative_date is None
+            else str(sim_metrics.first_negative_date),
         )
         st.metric(
             "Cushion breach",
-            "-" if metrics.cushion_breach_date is None else str(metrics.cushion_breach_date),
+            "-"
+            if sim_metrics.cushion_breach_date is None
+            else str(sim_metrics.cushion_breach_date),
         )
-        st.metric("Upcoming bills total (within horizon)", f"${metrics.total_upcoming_bills:,.2f}")
-        st.metric("Est. unposted interest (cards)", f"${metrics.accrued_interest_estimate:,.2f}")
+        st.metric(
+            "Upcoming bills total (within horizon)", f"${sim_metrics.total_upcoming_bills:,.2f}"
+        )
+        st.metric(
+            "Est. unposted interest (cards)", f"${sim_metrics.accrued_interest_estimate:,.2f}"
+        )
 
-# ------------------
-# Analytics
-# ------------------
-with tab_analytics:
+
+def render_analytics_tab() -> None:
     st.header("Analytics")
     dials = dials_from_state()
 
     st.subheader("Break-even daily earnings search (0–200)")
     fingerprint = _fingerprint(dials)
     be_df = run_break_even(fingerprint, days=31)
-    st.dataframe(be_df, width="stretch", hide_index=True)
+    st.dataframe(be_df, use_container_width=True, hide_index=True)
 
     st.subheader("Monthly snapshot (6 months)")
     snap = monthly_snapshot(dials, months=6)
     st.json(snap)
 
-# ------------------
-# Planner (with robust DateColumn handling for blackouts)
-# ------------------
-with tab_planner:
+
+def render_planner_tab() -> None:
     st.header("Planner")
 
     dials = dials_from_state()
@@ -370,7 +356,7 @@ with tab_planner:
 
     if mode == "Constant daily target":
         st.subheader("Minimum constant daily earnings")
-        days = st.slider(
+        horizon_days = st.slider(
             "days to satisfy (horizon)",
             min_value=28,
             max_value=186,
@@ -379,10 +365,10 @@ with tab_planner:
             key="planner_days_constant",
         )
 
-        res_const = plan_min_daily_earnings(dials, days=days)
+        res_const = plan_min_daily_earnings(dials, days=horizon_days)
         if res_const.ok:
             st.success(
-                f"Minimum constant daily earnings to avoid overdraft in {days} days: "
+                f"Minimum constant daily earnings to avoid overdraft in {horizon_days} days: "
                 f"${res_const.daily_target:,.2f}"
             )
             st.caption(
@@ -396,7 +382,7 @@ with tab_planner:
         st.subheader("Day-by-day earnings schedule")
 
         c1, c2, c3, c4 = st.columns([1, 1, 1, 1])
-        days = c1.slider(
+        horizon_days = c1.slider(
             "Horizon (days)", min_value=28, max_value=186, value=60, step=1, key="planner_days_var"
         )
         safety_target = c2.selectbox(
@@ -439,7 +425,7 @@ with tab_planner:
             _blackouts,
             num_rows="dynamic",
             column_config={"date": st.column_config.DateColumn("date", format="iso8601")},
-            width="stretch",
+            use_container_width=True,
             key="blackouts_editor",
         )
 
@@ -450,7 +436,7 @@ with tab_planner:
 
         res_var = plan_variable_daily_earnings(
             dials,
-            days=days,
+            days=horizon_days,
             safety_target="zero" if safety_target == "zero" else "cushion",
             daily_cap=cap,
             future_daily_hint=future_hint,
@@ -470,12 +456,12 @@ with tab_planner:
 
             st.line_chart(
                 df.set_index("date")[["earn_required", "earn_capped"]],
-                width="stretch",
+                use_container_width=True,
             )
 
             st.dataframe(
                 df,
-                width="stretch",
+                use_container_width=True,
                 hide_index=True,
                 column_config={
                     "date": st.column_config.DateColumn("date", format="YYYY-MM-DD"),
@@ -511,10 +497,8 @@ with tab_planner:
         else:
             st.info("No rows to display.")
 
-# ------------------
-# Wishlist (Google Sheets)
-# ------------------
-with tab_wishlist:
+
+def render_wishlist_tab() -> None:
     st.header("Wishlist (Google Sheets)")
 
     st.markdown(
@@ -530,7 +514,7 @@ with tab_wishlist:
             sa = st.secrets["gcp_service_account"]
             wish = read_wishlist_by_url(sheet_url, ws_name, sa)
             st.subheader("Wishlist data")
-            st.dataframe(wish, width="stretch", hide_index=True)
+            st.dataframe(wish, use_container_width=True, hide_index=True)
 
             # Build a day-by-day plan first (respecting blackouts)
             dials = dials_from_state()
@@ -557,11 +541,9 @@ with tab_wishlist:
             )
             plan_df = pd.DataFrame([r.__dict__ for r in plan_for_wishlist.rows])
             plan_df["date"] = pd.to_datetime(plan_df["date"])
-            base = (
-                0.0  # change to float(dials.safety_cushion) if you want cushion as the hard floor
-            )
+            safe_floor = 0.0  # change to float(dials.safety_cushion) for cushion as the hard floor
             plan_df["safe_surplus"] = (
-                plan_df["end_balance"] - (base + plan_df["reserve_7d_total"])
+                plan_df["end_balance"] - (safe_floor + plan_df["reserve_7d_total"])
             ).round(2)
 
             # Greedy fund by Priority (higher first)
@@ -605,8 +587,41 @@ with tab_wishlist:
                 ["Earliest fully-funded", "Priority"], na_position="last", ascending=[True, False]
             )
             st.subheader("Earliest good buy dates (by priority)")
-            st.dataframe(out, width="stretch", hide_index=True)
+            st.dataframe(out, use_container_width=True, hide_index=True)
         except KeyError:
             st.error("Missing st.secrets['gcp_service_account']. See instructions below.")
         except Exception as e:
             st.error(str(e))
+
+
+# ------------------
+# Title & Tabs
+# ------------------
+st.title("CashSim (single-page)")
+st.caption(
+    "Edit inputs, bills, debt, and one-offs — then simulate and analyze break-even, "
+    "and plan a daily target — all here."
+)
+
+tab_inputs, tab_bills, tab_debt, tab_oneoffs, tab_sim, tab_analytics, tab_planner, tab_wishlist = (
+    st.tabs(
+        ["Inputs", "Bills", "Debt", "One-offs", "Simulation", "Analytics", "Planner", "Wishlist"]
+    )
+)
+
+with tab_inputs:
+    render_inputs_tab()
+with tab_bills:
+    render_bills_tab()
+with tab_debt:
+    render_debt_tab()
+with tab_oneoffs:
+    render_oneoffs_tab()
+with tab_sim:
+    render_sim_tab()
+with tab_analytics:
+    render_analytics_tab()
+with tab_planner:
+    render_planner_tab()
+with tab_wishlist:
+    render_wishlist_tab()

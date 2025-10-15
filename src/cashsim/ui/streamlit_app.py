@@ -75,7 +75,8 @@ def _load_config_cached(path: str, mtime: float) -> Dials:
 # ------------------
 st.title("CashSim (single-page)")
 st.caption(
-    "Edit inputs, bills, debt, and one-offs — then simulate, analyze break-even, and plan a daily target — all here."
+    "Edit inputs, bills, debt, and one-offs — then simulate and analyze break-even, "
+    "and plan a daily target — all here."
 )
 
 tab_inputs, tab_bills, tab_debt, tab_oneoffs, tab_sim, tab_analytics, tab_planner, tab_wishlist = (
@@ -151,7 +152,8 @@ with tab_inputs:
         except Exception as e:
             st.error(str(e))
 
-    # Prepare a Dials for download/save that includes blackouts even if ui.state.dials_from_state() doesn't
+    # Prepare a Dials for download/save that includes blackouts even if
+    # ui.state.dials_from_state() doesn't
     def _dials_with_blackouts() -> Dials:
         base = dials_from_state()
         # Pull editor dates and coerce to date objects
@@ -224,7 +226,8 @@ with tab_bills:
     st.subheader("Rolled-forward preview (bills + estimated CC mins)")
     st.dataframe(rolled_df, width="stretch", hide_index=True)
     st.caption(
-        "CC minimums here are estimates from current balances; actual mins are locked from statement balances."
+        "CC minimums here are estimates from current balances; "
+        "actual mins are locked from statement balances."
     )
 
 # ------------------
@@ -359,7 +362,10 @@ with tab_planner:
         ["Constant daily target", "Day-by-day plan"],
         horizontal=True,
         key="planner_mode",
-        help="Pick a single daily amount to avoid overdraft, or generate a daily schedule with caps/constraints.",
+        help=(
+            "Pick a single daily amount to avoid overdraft, "
+            "or generate a daily schedule with caps/constraints."
+        ),
     )
 
     if mode == "Constant daily target":
@@ -376,10 +382,12 @@ with tab_planner:
         res_const = plan_min_daily_earnings(dials, days=days)
         if res_const.ok:
             st.success(
-                f"Minimum constant daily earnings to avoid overdraft in {days} days: ${res_const.daily_target:,.2f}"
+                f"Minimum constant daily earnings to avoid overdraft in {days} days: "
+                f"${res_const.daily_target:,.2f}"
             )
             st.caption(
-                f"Simulated min balance: ${res_const.min_balance:,.2f} (first negative: {res_const.first_negative_date})"
+                f"Simulated min balance: ${res_const.min_balance:,.2f} "
+                f"(first negative: {res_const.first_negative_date})"
             )
         else:
             st.error("Could not find a feasible daily target up to a very large upper bound.")
@@ -495,7 +503,10 @@ with tab_planner:
             st.metric(
                 "Constant target on working days",
                 f"${const_target:,.2f}",
-                help="Hit at least this number on each day you can drive to stay above your chosen safety target.",
+                help=(
+                    "Hit at least this number on each day you can drive to stay above your "
+                    "chosen safety target."
+                ),
             )
         else:
             st.info("No rows to display.")

@@ -370,7 +370,10 @@ def plan_variable_daily_earnings(
 def constant_target_from_schedule(
     rows: list[DailyPlanRow], blackout_dates: Iterable[date]
 ) -> float:
-    """Return a safe constant target to hit on working days (max earn_required on non-blackout days)."""
+    """Return a safe constant target to hit on working days.
+
+    It equals the max `earn_required` on non-blackout days.
+    """
     bset = set(blackout_dates or [])
     needers = [r.earn_required for r in rows if r.date not in bset]
     return round(max(needers), 2) if needers else 0.0

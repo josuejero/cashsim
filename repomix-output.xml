@@ -50,15 +50,19 @@ The content is organized as follows:
     44dff5104edbd685
     46926e31f2514b95
     5450694c90f33787
+    55ec52dcd3a47e5f
     622e3ca106d878d8
     75e503854c8b7fc5
     abd2f506ec370539
     ac417f1031ce8681
     ade185e83c517a1e
+    b0f23aacd139da46
     b712ebe763127196
     b9ebac38c647a1bc
     da39a3ee5e6b4b0d
     e379c7b39a11f107
+    e387c69cbe66d125
+    e7068b01ae137f00
     eb6d189fc4afb526
     f1296bf796213b43
 docs/
@@ -113,6 +117,7 @@ tests/
 .pre-commit-config.yaml
 .repomixignore
 example.json
+mypy.ini
 patch.diff
 pyproject.toml
 pyrightconfig.json
@@ -122,6 +127,34 @@ repomix.config.json
 
 <files>
 This section contains the contents of the repository's files.
+
+<file path=".hypothesis/constants/55ec52dcd3a47e5f">
+# file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/sim/core.py
+# hypothesis_version: 6.140.3
+
+[0.0, 1e-09, '%a', '[^a-z0-9_]+', '_', 'adb_days', 'adb_sum', 'avalanche', 'balance', 'bill_due', 'cc_events', 'cc_extra_on_due', 'cc_interest_posted', 'cc_min_paid', 'cycle_due', 'cycle_start', 'date', 'due_simple', 'earn', 'fillups', 'gas_bucket', 'grace_active', 'min_due_locked', 'next_stmt', 'oneoff_contribs', 'oneoff_paid', 'oneoffs', 'payments_since_stmt', 'statement_adb', 'statement_balance', 'total_cc_balance', 'total_iou_balance', 'weekday']
+</file>
+
+<file path=".hypothesis/constants/b0f23aacd139da46">
+# file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/sim/types.py
+# hypothesis_version: 6.140.3
+
+['extra', 'finance', 'min']
+</file>
+
+<file path=".hypothesis/constants/e387c69cbe66d125">
+# file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/analytics/snapshot.py
+# hypothesis_version: 6.140.3
+
+[0.0, '%Y-%m', 'M', 'annualized_leftover', 'est_gas', 'est_income', 'events', 'first_date', 'gas', 'income', 'last_date', 'leftover', 'month', 'total_bills', 'workday_count']
+</file>
+
+<file path=".hypothesis/constants/e7068b01ae137f00">
+# file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/utils/money.py
+# hypothesis_version: 6.140.3
+
+[100, '0.01', '365']
+</file>
 
 <file path=".hypothesis/constants/05003b5d7106c082">
 # file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/models.py
@@ -692,6 +725,33 @@ def test_adb_identity_property(daily: list[Decimal], apr: Decimal) -> None:
 cashsim.utils.money
 </file>
 
+<file path="mypy.ini">
+# mypy.ini
+[mypy]
+python_version = 3.10
+warn_unused_ignores = True
+
+# Third-party packages that aren’t installed in CI’s 3.10/3.11 jobs.
+[mypy-streamlit.*]
+ignore_missing_imports = True
+
+[mypy-gspread.*]
+ignore_missing_imports = True
+
+[mypy-google.*]
+ignore_missing_imports = True
+
+[mypy-gspread_dataframe.*]
+ignore_missing_imports = True
+
+[mypy-pydantic.*]
+ignore_missing_imports = True
+
+# If your code imports typing_extensions on 3.10
+[mypy-typing_extensions.*]
+ignore_missing_imports = True
+</file>
+
 <file path="patch.diff">
 *** Begin Patch
 *** Update File: src/cashsim/utils/money.py
@@ -800,69 +860,6 @@ Streamlit cash flow simulator.
     "encoding": "o200k_base"
   }
 }
-</file>
-
-<file path=".github/workflows/ci.yml">
-name: CI you can trust
-
-on:
-  push:
-    branches: ["**"]
-  pull_request:
-
-permissions:
-  contents: read
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.11", "3.12"]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }} (with pip cache)
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: "pip"
-          # make caching robust when you add/rename files
-          cache-dependency-path: |
-            pyproject.toml
-            requirements*.txt
-
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip
-
-      # Install the tooling we need for lint, types, and tests
-      - name: Install CI tooling
-        run: pip install ruff mypy pyright pytest pandas-stubs types-python-dateutil hypothesis
-
-      # The project uses a src/ layout; expose it without installing the package
-      - name: Expose src/ on PYTHONPATH
-        run: echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
-
-      # Optional: install the project on the version that matches pyproject's floor (>=3.12)
-      - name: Editable install on 3.12
-        if: matrix.python-version == '3.12'
-        run: pip install -e .
-
-      - name: Ruff (lint)
-        run: ruff check .
-        # For PR annotations, you can add: --output-format=github
-
-      - name: Pyright (type check)
-        run: pyright
-
-      - name: Mypy (type check)
-        run: mypy .
-
-      - name: Pytest
-        run: pytest -q
 </file>
 
 <file path="src/cashsim/analytics/break_even.py">
@@ -1070,35 +1067,6 @@ class CardRT:
     statement_day: int | None
 </file>
 
-<file path="src/cashsim/ui/formatters.py">
-from __future__ import annotations
-
-import pandas as pd
-
-
-def stringify_events_columns(df: pd.DataFrame) -> pd.DataFrame:
-    out = df.copy()
-
-    def _fmt_pair_list(v: object) -> str:
-        if isinstance(v, (list, tuple)) and len(v) > 0:
-            try:
-                return "; ".join(f"{name}: ${amt:,.2f}" for (name, amt) in v)  # type: ignore[misc]
-            except Exception:
-                return str(v)
-        return "" if v is None or (isinstance(v, float) and pd.isna(v)) else str(v)
-
-    for col in [
-        "cc_extra_on_due",
-        "cc_interest_posted",
-        "cc_min_paid",
-        "oneoff_contribs",
-        "oneoff_paid",
-    ]:
-        if col in out.columns:
-            out[col] = out[col].apply(_fmt_pair_list)
-    return out
-</file>
-
 <file path="src/cashsim/__init__.py">
 from .analytics.break_even import break_even_grid
 from .analytics.snapshot import monthly_snapshot
@@ -1214,44 +1182,6 @@ class Dials(BaseModel):
     blackouts: list[date] = []
 </file>
 
-<file path=".pre-commit-config.yaml">
-default_language_version:
-  python: python3.12
-repos:
-- repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.14.0
-  hooks:
-  - id: ruff-check
-    args:
-    - --fix
-    - --unsafe-fixes
-    - --ignore
-    - E501
-  - id: ruff-format
-- repo: https://github.com/pre-commit/mirrors-mypy
-  rev: v1.18.2
-  hooks:
-  - id: mypy
-    additional_dependencies:
-    - pandas-stubs
-    - types-python-dateutil
-- repo: https://github.com/ComPWA/pyright-pre-commit
-  rev: v1.1.406
-  hooks:
-  - id: pyright
-- repo: https://github.com/PyCQA/bandit
-  rev: 1.8.6
-  hooks:
-  - id: bandit
-    args:
-    - -q
-    - -r
-    - src
-    - --exclude
-    - .venv,venv,tests
-    pass_filenames: false
-</file>
-
 <file path=".repomixignore">
 # Add patterns to ignore here, one per line
 # Example:
@@ -1259,6 +1189,68 @@ repos:
 # tmp/
 .streamlit/secrets.toml
 monkeytype.sqlite3
+</file>
+
+<file path=".github/workflows/ci.yml">
+name: CI you can trust
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }} (with pip cache)
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+          # make caching robust when you add/rename files
+          cache-dependency-path: |
+            pyproject.toml
+            requirements*.txt
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      # Install the tooling we need for lint, types, and tests
+      - name: Install CI tooling
+        run: pip install ruff mypy pyright pytest pandas-stubs types-python-dateutil hypothesis typing_extensions
+      # The project uses a src/ layout; expose it without installing the package
+      - name: Expose src/ on PYTHONPATH
+        run: echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
+
+      # Optional: install the project on the version that matches pyproject's floor (>=3.12)
+      - name: Editable install on 3.12
+        if: matrix.python-version == '3.12'
+        run: pip install -e .
+
+      - name: Ruff (lint)
+        run: ruff check .
+        # For PR annotations, you can add: --output-format=github
+
+      - name: Pyright (type check)
+        run: pyright
+
+      - name: Mypy (type check)
+        run: mypy .
+
+      - name: Pytest
+        run: pytest -q
 </file>
 
 <file path="src/cashsim/analytics/snapshot.py">
@@ -1724,63 +1716,6 @@ def post_simple_interest_if_due(
     return out
 </file>
 
-<file path="src/cashsim/sim/types.py">
-from __future__ import annotations
-
-from dataclasses import dataclass
-from datetime import date
-from typing import Literal, NotRequired, TypedDict
-
-
-class BaseEvent(TypedDict):
-    day: date
-    account: str
-    new_balance: float
-
-
-class FinanceEvent(BaseEvent):
-    kind: Literal["finance"]
-    amt: float
-
-
-class MinEvent(BaseEvent):
-    kind: Literal["min"]
-    amt: float
-
-
-class ExtraEvent(BaseEvent):
-    kind: Literal["extra"]
-    extra: float
-    surplus_used: NotRequired[float]
-    reserve_needed: NotRequired[float]
-    reserve_7d_bills: NotRequired[float]
-    reserve_7d_mins: NotRequired[float]
-    reserve_7d_gas: NotRequired[float]
-
-
-Event = FinanceEvent | MinEvent | ExtraEvent
-
-
-# minimal card-state shape for runtime helpers
-class CardState(TypedDict, total=False):
-    balance: float
-    adb_days: float
-    adb_sum: float
-    min_due_locked: float
-
-
-@dataclass
-class SimMetrics:
-    min_balance: float
-    min_balance_date: date | None
-    first_negative_date: date | None
-    total_upcoming_bills: float
-    friend_ask_needed: float
-    friend_ask_latest_date: date | None
-    cushion_breach_date: date | None
-    accrued_interest_estimate: float
-</file>
-
 <file path="src/cashsim/ui/components.py">
 from __future__ import annotations
 
@@ -1892,6 +1827,39 @@ def oneoff_editor(df: pd.DataFrame, key: str | int | None = "oneoff_editor") -> 
         },
         key=key,
     )
+</file>
+
+<file path="src/cashsim/ui/formatters.py">
+from __future__ import annotations
+
+from collections.abc import Iterable  # NEW
+from typing import cast
+
+import pandas as pd
+
+
+def stringify_events_columns(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+
+    def _fmt_pair_list(v: object) -> str:
+        if isinstance(v, (list, tuple)) and len(v) > 0:
+            try:
+                pairs = cast(Iterable[tuple[str, float]], v)  # NEW
+                return "; ".join(f"{name}: ${float(amt):,.2f}" for (name, amt) in pairs)
+            except Exception:
+                return str(v)
+        return "" if v is None or (isinstance(v, float) and pd.isna(v)) else str(v)
+
+    for col in [
+        "cc_extra_on_due",
+        "cc_interest_posted",
+        "cc_min_paid",
+        "oneoff_contribs",
+        "oneoff_paid",
+    ]:
+        if col in out.columns:
+            out[col] = out[col].apply(_fmt_pair_list)
+    return out
 </file>
 
 <file path="src/cashsim/ui/state.py">
@@ -2037,24 +2005,6 @@ def dials_from_state() -> Dials:
     )
 </file>
 
-<file path="src/cashsim/cli.py">
-from __future__ import annotations
-
-import sys
-
-from streamlit.web import cli as stcli
-
-
-def st_main() -> None:
-    sys.argv = ["streamlit", "run", "src/cashsim/ui/streamlit_app.py", "--server.headless=true"]
-    stcli.main()
-
-
-def main(argv: list[str] | None = None) -> int:
-    st_main()
-    return 0
-</file>
-
 <file path="tests/test_interest_decimal.py">
 from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP, Decimal
 
@@ -2081,6 +2031,45 @@ def test_adb_property_equivalence() -> None:
     i1 = quantize_cents(adb * daily_rate * days, rounding=ROUND_HALF_UP)
     i2 = quantize_cents(sum((b * daily_rate for b in daily), D("0")), rounding=ROUND_HALF_UP)
     assert i1 == i2
+</file>
+
+<file path=".pre-commit-config.yaml">
+default_language_version:
+  python: python3.12
+repos:
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.14.0
+  hooks:
+  - id: ruff-check
+    args:
+    - --fix
+    - --unsafe-fixes
+    - --ignore
+    - E501
+  - id: ruff-format
+- repo: https://github.com/pre-commit/mirrors-mypy
+  rev: v1.18.2
+  hooks:
+  - id: mypy
+    additional_dependencies:
+    - pandas-stubs
+    - types-python-dateutil
+    - typing-extensions>=4.0
+- repo: https://github.com/ComPWA/pyright-pre-commit
+  rev: v1.1.406
+  hooks:
+  - id: pyright
+- repo: https://github.com/PyCQA/bandit
+  rev: 1.8.6
+  hooks:
+  - id: bandit
+    args:
+    - -q
+    - -r
+    - src
+    - --exclude
+    - .venv,venv,tests
+    pass_filenames: false
 </file>
 
 <file path="src/cashsim/planning/planner.py">
@@ -2465,6 +2454,68 @@ def constant_target_from_schedule(
     return round(max(needers), 2) if needers else 0.0
 </file>
 
+<file path="src/cashsim/sim/types.py">
+# File: src/cashsim/sim/types.py
+from __future__ import annotations
+
+# NOTE: We intentionally import NotRequired from typing_extensions so this file
+# type-checks on Python < 3.11. We prevent Ruff's pyupgrade from rewriting this.
+from dataclasses import dataclass
+from datetime import date
+from typing import Literal
+
+from typing_extensions import NotRequired, TypedDict  # ruff: noqa
+
+
+class BaseEvent(TypedDict):
+    day: date
+    account: str
+    new_balance: float
+
+
+class FinanceEvent(BaseEvent):
+    kind: Literal["finance"]
+    amt: float
+
+
+class MinEvent(BaseEvent):
+    kind: Literal["min"]
+    amt: float
+
+
+class ExtraEvent(BaseEvent):
+    kind: Literal["extra"]
+    extra: float
+    surplus_used: NotRequired[float]
+    reserve_needed: NotRequired[float]
+    reserve_7d_bills: NotRequired[float]
+    reserve_7d_mins: NotRequired[float]
+    reserve_7d_gas: NotRequired[float]
+
+
+Event = FinanceEvent | MinEvent | ExtraEvent
+
+
+# minimal card-state shape for runtime helpers
+class CardState(TypedDict, total=False):
+    balance: float
+    adb_days: float
+    adb_sum: float
+    min_due_locked: float
+
+
+@dataclass
+class SimMetrics:
+    min_balance: float
+    min_balance_date: date | None
+    first_negative_date: date | None
+    total_upcoming_bills: float
+    friend_ask_needed: float
+    friend_ask_latest_date: date | None
+    cushion_breach_date: date | None
+    accrued_interest_estimate: float
+</file>
+
 <file path="src/cashsim/utils/money.py">
 from __future__ import annotations
 
@@ -2516,6 +2567,30 @@ def round_money(x: Decimal) -> Decimal:
 def post_daily_interest(balance: Decimal, apr: Decimal) -> Decimal:
     daily_rate = D(apr) / D("365")
     return round_money(D(balance) * daily_rate)
+</file>
+
+<file path="src/cashsim/cli.py">
+from __future__ import annotations
+
+import sys
+from importlib import import_module
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    # editor-only hint; avoids hard dependency during type checking
+    from streamlit.web import cli as _stcli  # noqa: F401
+
+
+def st_main() -> None:
+    # Lazy import so CI/mypy don’t need streamlit installed
+    stcli = import_module("streamlit.web.cli")
+    sys.argv = ["streamlit", "run", "src/cashsim/ui/streamlit_app.py", "--server.headless=true"]
+    stcli.main()  # removed: type: ignore[attr-defined]
+
+
+def main(argv: list[str] | None = None) -> int:
+    st_main()
+    return 0
 </file>
 
 <file path=".gitignore">
@@ -2580,7 +2655,7 @@ import pandas as pd
 import streamlit as st
 from google.auth.credentials import Credentials  # base interface
 from google.oauth2 import service_account
-from gspread_dataframe import (  # type: ignore[reportMissingTypeStubs]
+from gspread_dataframe import (
     get_as_dataframe,
     set_with_dataframe,
 )
@@ -3269,7 +3344,7 @@ with tab_wishlist:
                 0.0  # change to float(dials.safety_cushion) if you want cushion as the hard floor
             )
             plan_df["safe_surplus"] = (
-                plan_df["end_balance"] - (base + plan_df["reserve_7d_total"])  # type: ignore[operator]
+                plan_df["end_balance"] - (base + plan_df["reserve_7d_total"])
             ).round(2)
 
             # Greedy fund by Priority (higher first)
@@ -3404,6 +3479,7 @@ allow-star-arg-any = true
 [tool.ruff.lint.per-file-ignores]
 "typings/**" = ["ALL"]
 "**/*.pyi" = ["ALL"]
+"src/cashsim/sim/types.py" = ["UP"]
 </file>
 
 </files>

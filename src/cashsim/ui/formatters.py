@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterable  # NEW
+from typing import cast
+
 import pandas as pd
 
 
@@ -9,7 +12,8 @@ def stringify_events_columns(df: pd.DataFrame) -> pd.DataFrame:
     def _fmt_pair_list(v: object) -> str:
         if isinstance(v, (list, tuple)) and len(v) > 0:
             try:
-                return "; ".join(f"{name}: ${amt:,.2f}" for (name, amt) in v)  # type: ignore[misc]
+                pairs = cast(Iterable[tuple[str, float]], v)  # NEW
+                return "; ".join(f"{name}: ${float(amt):,.2f}" for (name, amt) in pairs)
             except Exception:
                 return str(v)
         return "" if v is None or (isinstance(v, float) and pd.isna(v)) else str(v)

@@ -9,7 +9,7 @@ import pandas as pd
 import streamlit as st
 from google.auth.credentials import Credentials  # base interface
 from google.oauth2 import service_account
-from gspread_dataframe import (  # type: ignore[reportMissingTypeStubs]
+from gspread_dataframe import (
     get_as_dataframe,
     set_with_dataframe,
 )

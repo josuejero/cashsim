@@ -561,7 +561,7 @@ with tab_wishlist:
                 0.0  # change to float(dials.safety_cushion) if you want cushion as the hard floor
             )
             plan_df["safe_surplus"] = (
-                plan_df["end_balance"] - (base + plan_df["reserve_7d_total"])  # type: ignore[operator]
+                plan_df["end_balance"] - (base + plan_df["reserve_7d_total"])
             ).round(2)
 
             # Greedy fund by Priority (higher first)

@@ -25,7 +25,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
-          # make caching robust when you add/rename files
           cache-dependency-path: |
             pyproject.toml
             requirements*.txt
@@ -33,22 +32,26 @@ jobs:
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
 
-      # Install the tooling we need for lint, types, and tests
-      - name: Install project (deps) + tooling
+      # Install tooling everywhere; skip installing the package on 3.10/3.11
+      - name: Install tooling (no project install on 3.10/3.11)
         run: |
-          pip install -e .[dev]
           pip install ruff mypy pyright pytest
+          pip install pandas-stubs types-python-dateutil typing-extensions
+
       - name: Expose src/ on PYTHONPATH
         run: echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
 
-      # Optional: install the project on the version that matches pyproject's floor (>=3.12)
-      - name: Editable install on 3.12
+      # Only install the project on the supported version
+      - name: Install project (editable) on 3.12 only
         if: matrix.python-version == '3.12'
-        run: pip install -e .
+        run: pip install -e ".[dev]"
+
+      - name: Install runtime deps for tests (3.12 only)
+        if: matrix.python-version == '3.12'
+        run: pip install pandas
 
       - name: Ruff (lint)
         run: ruff check .
-        # For PR annotations, you can add: --output-format=github
 
       - name: Pyright (type check)
         run: pyright
@@ -56,8 +59,7 @@ jobs:
       - name: Mypy (type check)
         run: mypy .
 
-      - name: Install runtime deps (quick workaround)
-        run: pip install pandas
-
-      - name: Pytest
+      # Run tests only where the package can actually be installed
+      - name: Pytest (3.12 only)
+        if: matrix.python-version == '3.12'
         run: pytest -q

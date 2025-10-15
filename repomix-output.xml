@@ -128,34 +128,6 @@ repomix.config.json
 <files>
 This section contains the contents of the repository's files.
 
-<file path=".hypothesis/constants/55ec52dcd3a47e5f">
-# file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/sim/core.py
-# hypothesis_version: 6.140.3
-
-[0.0, 1e-09, '%a', '[^a-z0-9_]+', '_', 'adb_days', 'adb_sum', 'avalanche', 'balance', 'bill_due', 'cc_events', 'cc_extra_on_due', 'cc_interest_posted', 'cc_min_paid', 'cycle_due', 'cycle_start', 'date', 'due_simple', 'earn', 'fillups', 'gas_bucket', 'grace_active', 'min_due_locked', 'next_stmt', 'oneoff_contribs', 'oneoff_paid', 'oneoffs', 'payments_since_stmt', 'statement_adb', 'statement_balance', 'total_cc_balance', 'total_iou_balance', 'weekday']
-</file>
-
-<file path=".hypothesis/constants/b0f23aacd139da46">
-# file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/sim/types.py
-# hypothesis_version: 6.140.3
-
-['extra', 'finance', 'min']
-</file>
-
-<file path=".hypothesis/constants/e387c69cbe66d125">
-# file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/analytics/snapshot.py
-# hypothesis_version: 6.140.3
-
-[0.0, '%Y-%m', 'M', 'annualized_leftover', 'est_gas', 'est_income', 'events', 'first_date', 'gas', 'income', 'last_date', 'leftover', 'month', 'total_bills', 'workday_count']
-</file>
-
-<file path=".hypothesis/constants/e7068b01ae137f00">
-# file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/utils/money.py
-# hypothesis_version: 6.140.3
-
-[100, '0.01', '365']
-</file>
-
 <file path=".hypothesis/constants/05003b5d7106c082">
 # file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/models.py
 # hypothesis_version: 6.140.3
@@ -189,6 +161,13 @@ This section contains the contents of the repository's files.
 # hypothesis_version: 6.140.3
 
 []
+</file>
+
+<file path=".hypothesis/constants/55ec52dcd3a47e5f">
+# file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/sim/core.py
+# hypothesis_version: 6.140.3
+
+[0.0, 1e-09, '%a', '[^a-z0-9_]+', '_', 'adb_days', 'adb_sum', 'avalanche', 'balance', 'bill_due', 'cc_events', 'cc_extra_on_due', 'cc_interest_posted', 'cc_min_paid', 'cycle_due', 'cycle_start', 'date', 'due_simple', 'earn', 'fillups', 'gas_bucket', 'grace_active', 'min_due_locked', 'next_stmt', 'oneoff_contribs', 'oneoff_paid', 'oneoffs', 'payments_since_stmt', 'statement_adb', 'statement_balance', 'total_cc_balance', 'total_iou_balance', 'weekday']
 </file>
 
 <file path=".hypothesis/constants/622e3ca106d878d8">
@@ -226,6 +205,13 @@ This section contains the contents of the repository's files.
 [0.0]
 </file>
 
+<file path=".hypothesis/constants/b0f23aacd139da46">
+# file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/sim/types.py
+# hypothesis_version: 6.140.3
+
+['extra', 'finance', 'min']
+</file>
+
 <file path=".hypothesis/constants/b712ebe763127196">
 # file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/sim/events.py
 # hypothesis_version: 6.140.3
@@ -252,6 +238,20 @@ This section contains the contents of the repository's files.
 # hypothesis_version: 6.140.3
 
 ['Okay', 'Risky', 'Safe', 'weekday_earnings']
+</file>
+
+<file path=".hypothesis/constants/e387c69cbe66d125">
+# file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/analytics/snapshot.py
+# hypothesis_version: 6.140.3
+
+[0.0, '%Y-%m', 'M', 'annualized_leftover', 'est_gas', 'est_income', 'events', 'first_date', 'gas', 'income', 'last_date', 'leftover', 'month', 'total_bills', 'workday_count']
+</file>
+
+<file path=".hypothesis/constants/e7068b01ae137f00">
+# file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/utils/money.py
+# hypothesis_version: 6.140.3
+
+[100, '0.01', '365']
 </file>
 
 <file path=".hypothesis/constants/eb6d189fc4afb526">
@@ -1067,27 +1067,6 @@ class CardRT:
     statement_day: int | None
 </file>
 
-<file path="src/cashsim/__init__.py">
-from .analytics.break_even import break_even_grid
-from .analytics.snapshot import monthly_snapshot
-from .models import IOU, Bill, CreditCard, Dials, InvestmentSettings, OneOff
-from .sim.core import simulate_month
-from .sim.types import SimMetrics
-
-__all__ = [
-    "Bill",
-    "CreditCard",
-    "IOU",
-    "OneOff",
-    "InvestmentSettings",
-    "Dials",
-    "simulate_month",
-    "SimMetrics",
-    "break_even_grid",
-    "monthly_snapshot",
-]
-</file>
-
 <file path="src/cashsim/__main__.py">
 from .cli import main
 
@@ -1189,68 +1168,6 @@ class Dials(BaseModel):
 # tmp/
 .streamlit/secrets.toml
 monkeytype.sqlite3
-</file>
-
-<file path=".github/workflows/ci.yml">
-name: CI you can trust
-
-on:
-  push:
-    branches: ["**"]
-  pull_request:
-
-permissions:
-  contents: read
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.11", "3.12"]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }} (with pip cache)
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: "pip"
-          # make caching robust when you add/rename files
-          cache-dependency-path: |
-            pyproject.toml
-            requirements*.txt
-
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip
-
-      # Install the tooling we need for lint, types, and tests
-      - name: Install CI tooling
-        run: pip install ruff mypy pyright pytest pandas-stubs types-python-dateutil hypothesis typing_extensions
-      # The project uses a src/ layout; expose it without installing the package
-      - name: Expose src/ on PYTHONPATH
-        run: echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
-
-      # Optional: install the project on the version that matches pyproject's floor (>=3.12)
-      - name: Editable install on 3.12
-        if: matrix.python-version == '3.12'
-        run: pip install -e .
-
-      - name: Ruff (lint)
-        run: ruff check .
-        # For PR annotations, you can add: --output-format=github
-
-      - name: Pyright (type check)
-        run: pyright
-
-      - name: Mypy (type check)
-        run: mypy .
-
-      - name: Pytest
-        run: pytest -q
 </file>
 
 <file path="src/cashsim/analytics/snapshot.py">
@@ -2005,6 +1922,49 @@ def dials_from_state() -> Dials:
     )
 </file>
 
+<file path="src/cashsim/__init__.py">
+from importlib import import_module
+
+from .analytics.break_even import break_even_grid
+from .analytics.snapshot import monthly_snapshot
+from .models import IOU, Bill, CreditCard, Dials, InvestmentSettings, OneOff
+from .sim.core import simulate_month
+from .sim.types import SimMetrics
+
+__all__ = [
+    "Bill",
+    "CreditCard",
+    "IOU",
+    "OneOff",
+    "InvestmentSettings",
+    "Dials",
+    "simulate_month",
+    "SimMetrics",
+    "break_even_grid",
+    "monthly_snapshot",
+]
+
+
+def __getattr__(
+    name: str,
+) -> Bill | CreditCard | IOU | OneOff | InvestmentSettings | Dials | SimMetrics | type:
+    # Lightweight models
+    if name in {"Bill", "CreditCard", "IOU", "OneOff", "InvestmentSettings", "Dials"}:
+        m = import_module(".models", __name__)
+        return getattr(m, name)
+    # Simulation + types
+    if name == "simulate_month":
+        return import_module(".sim.core", __name__).simulate_month
+    if name == "SimMetrics":
+        return import_module(".sim.types", __name__).SimMetrics
+    # Analytics
+    if name == "break_even_grid":
+        return import_module(".analytics.break_even", __name__).break_even_grid
+    if name == "monthly_snapshot":
+        return import_module(".analytics.snapshot", __name__).monthly_snapshot
+    raise AttributeError(name)
+</file>
+
 <file path="tests/test_interest_decimal.py">
 from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP, Decimal
 
@@ -2070,6 +2030,72 @@ repos:
     - --exclude
     - .venv,venv,tests
     pass_filenames: false
+</file>
+
+<file path=".github/workflows/ci.yml">
+name: CI you can trust
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }} (with pip cache)
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+          # make caching robust when you add/rename files
+          cache-dependency-path: |
+            pyproject.toml
+            requirements*.txt
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      # Install the tooling we need for lint, types, and tests
+      - name: Install project (deps) + tooling
+        run: |
+          pip install -e .[dev]
+          pip install ruff mypy pyright pytest
+      - name: Expose src/ on PYTHONPATH
+        run: echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
+
+      # Optional: install the project on the version that matches pyproject's floor (>=3.12)
+      - name: Editable install on 3.12
+        if: matrix.python-version == '3.12'
+        run: pip install -e .
+
+      - name: Ruff (lint)
+        run: ruff check .
+        # For PR annotations, you can add: --output-format=github
+
+      - name: Pyright (type check)
+        run: pyright
+
+      - name: Mypy (type check)
+        run: mypy .
+
+      - name: Install runtime deps (quick workaround)
+        run: pip install pandas
+
+      - name: Pytest
+        run: pytest -q
 </file>
 
 <file path="src/cashsim/planning/planner.py">

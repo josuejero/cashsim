@@ -32,7 +32,7 @@ def _choose_creds(*, readonly: bool, sa_info: Mapping[str, Any] | None) -> Crede
         )
     # On GCP, this uses the attached service account; locally it can pick up user creds.
     creds, _ = google.auth.default(scopes=scopes)
-    return creds
+    return cast(Credentials, creds)
 
 
 @cache_resource(show_spinner=False)

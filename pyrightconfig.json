@@ -1,17 +1,11 @@
 {
   "typeCheckingMode": "standard",
   "executionEnvironments": [
-    {
-      "root": "src"
-    },
-    {
-      "root": "./src"
-    },
+    { "root": "src" },
+    { "root": "./src" },
     {
       "root": "./tests",
-      "extraPaths": [
-        "./src"
-      ]
+      "extraPaths": ["./src"]
     }
   ],
   "useLibraryCodeForTypes": true,
@@ -25,8 +19,6 @@
   "reportMissingParameterType": "warning",
   "reportArgumentType": "warning",
   "reportAttributeAccessIssue": "warning",
-  "venvPath": ".",
-  "venv": ".venv",
   "reportMissingImports": "warning",
   "reportUntypedFunctionDecorator": "warning",
   "reportUnusedVariable": "warning",

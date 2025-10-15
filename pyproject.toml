@@ -81,3 +81,4 @@ allow-star-arg-any = true
 [tool.ruff.lint.per-file-ignores]
 "typings/**" = ["ALL"]
 "**/*.pyi" = ["ALL"]
+"src/cashsim/sim/types.py" = ["UP"] 

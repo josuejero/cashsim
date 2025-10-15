@@ -35,8 +35,7 @@ jobs:
 
       # Install the tooling we need for lint, types, and tests
       - name: Install CI tooling
-        run: pip install ruff mypy pyright pytest pandas-stubs types-python-dateutil hypothesis
-
+        run: pip install ruff mypy pyright pytest pandas-stubs types-python-dateutil hypothesis typing_extensions
       # The project uses a src/ layout; expose it without installing the package
       - name: Expose src/ on PYTHONPATH
         run: echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV

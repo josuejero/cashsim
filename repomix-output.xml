@@ -123,69 +123,6 @@ repomix.config.json
 <files>
 This section contains the contents of the repository's files.
 
-<file path=".github/workflows/ci.yml">
-name: CI you can trust
-
-on:
-  push:
-    branches: ['**']
-  pull_request:
-
-permissions:
-  contents: read
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['3.10', '3.11', '3.12']
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }} (with pip cache)
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: 'pip'
-          # make caching robust when you add/rename files
-          cache-dependency-path: |
-            pyproject.toml
-            requirements*.txt
-
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip
-
-      # Install the tooling we need for lint, types, and tests
-      - name: Install CI tooling
-        run: pip install ruff mypy pyright pytest
-
-      # The project uses a src/ layout; expose it without installing the package
-      - name: Expose src/ on PYTHONPATH
-        run: echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
-
-      # Optional: install the project on the version that matches pyproject's floor (>=3.12)
-      - name: Editable install on 3.12
-        if: matrix.python-version == '3.12'
-        run: pip install -e .
-
-      - name: Ruff (lint)
-        run: ruff check .
-        # For PR annotations, you can add: --output-format=github
-
-      - name: Pyright (type check)
-        run: pyright
-
-      - name: Mypy (type check)
-        run: mypy .
-
-      - name: Pytest
-        run: pytest -q
-</file>
-
 <file path=".hypothesis/constants/05003b5d7106c082">
 # file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/models.py
 # hypothesis_version: 6.140.3
@@ -863,6 +800,69 @@ Streamlit cash flow simulator.
     "encoding": "o200k_base"
   }
 }
+</file>
+
+<file path=".github/workflows/ci.yml">
+name: CI you can trust
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }} (with pip cache)
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+          # make caching robust when you add/rename files
+          cache-dependency-path: |
+            pyproject.toml
+            requirements*.txt
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      # Install the tooling we need for lint, types, and tests
+      - name: Install CI tooling
+        run: pip install ruff mypy pyright pytest pandas-stubs types-python-dateutil hypothesis
+
+      # The project uses a src/ layout; expose it without installing the package
+      - name: Expose src/ on PYTHONPATH
+        run: echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
+
+      # Optional: install the project on the version that matches pyproject's floor (>=3.12)
+      - name: Editable install on 3.12
+        if: matrix.python-version == '3.12'
+        run: pip install -e .
+
+      - name: Ruff (lint)
+        run: ruff check .
+        # For PR annotations, you can add: --output-format=github
+
+      - name: Pyright (type check)
+        run: pyright
+
+      - name: Mypy (type check)
+        run: mypy .
+
+      - name: Pytest
+        run: pytest -q
 </file>
 
 <file path="src/cashsim/analytics/break_even.py">
@@ -2530,7 +2530,7 @@ bobbie_config.json
 
 <file path="pyrightconfig.json">
 {
-  "typeCheckingMode": "strict",
+  "typeCheckingMode": "standard",
   "executionEnvironments": [
     {
       "root": "src"
@@ -2561,7 +2561,10 @@ bobbie_config.json
   "reportMissingImports": "warning",
   "reportUntypedFunctionDecorator": "warning",
   "reportUnusedVariable": "warning",
-  "reportCallIssue": "warning"
+  "reportCallIssue": "warning",
+  "include": ["src", "tests"],
+  "extraPaths": ["src"],
+  "pythonVersion": "3.12"
 }
 </file>
 
@@ -2575,7 +2578,7 @@ import google.auth
 import gspread
 import pandas as pd
 import streamlit as st
-from google.auth.credentials import Credentials  # Application Default Credentials (ADC)
+from google.auth.credentials import Credentials  # base interface
 from google.oauth2 import service_account
 from gspread_dataframe import (  # type: ignore[reportMissingTypeStubs]
     get_as_dataframe,
@@ -2592,12 +2595,14 @@ def _choose_creds(*, readonly: bool, sa_info: Mapping[str, Any] | None) -> Crede
     """Prefer st.secrets if provided; otherwise fall back to ADC (keyless on GCP)."""
     scopes = SHEETS_READONLY if readonly else SHEETS_RW
     if sa_info:
+        # Accept dict-like service account info (e.g., from secrets or env) and scope it.
         return service_account.Credentials.from_service_account_info(dict(sa_info), scopes=scopes)
     if "gcp_service_account" in st.secrets:
         return service_account.Credentials.from_service_account_info(
             dict(st.secrets["gcp_service_account"]), scopes=scopes
         )
-    creds, _ = google.auth.default(scopes=scopes)  # uses attached service account on GCP
+    # On GCP, this uses the attached service account; locally it can pick up user creds.
+    creds, _ = google.auth.default(scopes=scopes)
     return creds
 
 

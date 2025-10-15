@@ -18,6 +18,7 @@ repos:
     additional_dependencies:
     - pandas-stubs
     - types-python-dateutil
+    - typing-extensions>=4.0
 - repo: https://github.com/ComPWA/pyright-pre-commit
   rev: v1.1.406
   hooks:

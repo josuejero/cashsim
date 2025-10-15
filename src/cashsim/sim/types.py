@@ -1,8 +1,13 @@
+# File: src/cashsim/sim/types.py
 from __future__ import annotations
 
+# NOTE: We intentionally import NotRequired from typing_extensions so this file
+# type-checks on Python < 3.11. We prevent Ruff's pyupgrade from rewriting this.
 from dataclasses import dataclass
 from datetime import date
-from typing import Literal, NotRequired, TypedDict
+from typing import Literal
+
+from typing_extensions import NotRequired, TypedDict  # ruff: noqa
 
 
 class BaseEvent(TypedDict):

@@ -3,7 +3,7 @@
 
 > Streamlit-powered cash-flow & debt planning simulator with daily scheduling, ADB interest, and “what-if” analytics.
 
-[![CI](https://github.com/<YOU>/<REPO>/actions/workflows/ci.yml/badge.svg)](https://github.com/<YOU>/<REPO>/actions/workflows/ci.yml)
+[![CI](https://github.com/josuejero/cashsim/actions/workflows/ci.yml/badge.svg)](https://github.com/josuejero/cashsim/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12+-informational.svg)](#)
 [![Live App](https://img.shields.io/badge/app-live-brightgreen.svg)](https://cashsim.streamlit.app)

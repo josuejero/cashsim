@@ -1,4 +1,14 @@
+# ruff: noqa: E402
 from __future__ import annotations
+
+# --- ensure src/ is importable even when the app file lives under src/cashsim/ui ---
+import sys
+from pathlib import Path
+
+_SRC = Path(__file__).resolve().parents[2]  # -> <repo>/src
+if str(_SRC) not in sys.path:
+    sys.path.insert(0, str(_SRC))
+# -------------------------------------------------------------------------------
 
 import json
 import os

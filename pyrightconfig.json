@@ -25,5 +25,8 @@
   "reportCallIssue": "warning",
   "include": ["src", "tests"],
   "extraPaths": ["src"],
-  "pythonVersion": "3.12"
+  "pythonVersion": "3.14",
+  "venvPath": ".",
+  "venv": ".venv"
 }
+

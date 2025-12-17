@@ -23,16 +23,15 @@ __all__ = [
 def __getattr__(
     name: str,
 ) -> Bill | CreditCard | IOU | OneOff | InvestmentSettings | Dials | SimMetrics | type:
-    # Lightweight models
     if name in {"Bill", "CreditCard", "IOU", "OneOff", "InvestmentSettings", "Dials"}:
         m = import_module(".models", __name__)
         return getattr(m, name)
-    # Simulation + types
+
     if name == "simulate_month":
         return import_module(".sim.core", __name__).simulate_month
     if name == "SimMetrics":
         return import_module(".sim.types", __name__).SimMetrics
-    # Analytics
+
     if name == "break_even_grid":
         return import_module(".analytics.break_even", __name__).break_even_grid
     if name == "monthly_snapshot":

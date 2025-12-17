@@ -35,7 +35,6 @@ def simulate_month(
     ious: list[IOU] = [IOU(**x.model_dump()) for x in dials.ious]
     oneoffs: list[OneOff] = [OneOff(**o.model_dump()) for o in getattr(dials, "oneoffs", [])]
 
-    # per-card state
     card_state: dict[str, dict] = {}
     for c in cards:
         cycle_start = last_statement_close_date(start, c.due_day, c.statement_day)
@@ -76,18 +75,15 @@ def simulate_month(
         day = start + timedelta(days=i)
         earn = float(dials.weekday_earnings)
 
-        # GAS
         balance, gas_bucket, fillups = apply_gas_skim_and_fillups(
             balance, gas_bucket, earn, dials.gas_pct, dials.gas_fill_size
         )
 
-        # BILLS (non-debt)
         bill_due_today = sum_non_debt_bills_due_today(day, bills)
         if bill_due_today > 0:
             balance -= bill_due_today
             paid_non_debt_bills += bill_due_today
 
-        # ---------- one-off contributions from surplus ----------
         oneoff_contrib_events: list[tuple[str, float]] = []
         total_now, _, _, gas_pred_now = reserve_next_7_days(
             day,
@@ -122,7 +118,6 @@ def simulate_month(
                 remaining = round(remaining - contrib, 2)
                 oneoff_contrib_events.append((o.name, contrib))
 
-        # ---------- pay one-offs on due date ----------
         oneoff_paid_events: list[tuple[str, float]] = []
         for o in oneoffs:
             if (not oneoff_paid[o.name]) and (day == o.due_date):
@@ -135,7 +130,6 @@ def simulate_month(
                 oneoff_paid_events.append((o.name, o.amount))
                 paid_oneoffs_total = round(paid_oneoffs_total + o.amount, 2)
 
-        # ---------- cards ----------
         interest_events: list[tuple[str, float]] = []
         minpay_events: list[tuple[str, float]] = []
         extra_on_due_events: list[tuple[str, float]] = []
@@ -147,13 +141,12 @@ def simulate_month(
         if dials.interest_mode == "statement_adb":
             for acc, amt in post_statement_charges_and_advance(day, card_state, cards):
                 interest_events.append((acc, amt))
-                # event entry
+
                 for c in cards:
                     if c.name == acc:
                         add_finance_event(unified_events, day, acc, amt, c.balance)
                         break
 
-        # due date: mins + extras
         due_today = [c for c in cards if next_due_date(day, c.due_day) == day and c.balance > 0]
         if due_today:
             locked_mins = {
@@ -162,7 +155,6 @@ def simulate_month(
                 if st["min_due_locked"] is not None
             }
 
-            # minimums
             for c in due_today:
                 locked = locked_mins.get(c.name)
                 due_min = (
@@ -233,7 +225,6 @@ def simulate_month(
                     if dials.interest_mode == "statement_adb":
                         card_state[c.name]["payments_since_stmt"] += extra
 
-            # set grace flags
             if dials.interest_mode == "statement_adb":
                 for c in due_today:
                     st = card_state[c.name]
@@ -250,7 +241,6 @@ def simulate_month(
                         add_finance_event(unified_events, day, acc, amt, c.balance)
                         break
 
-        # extremes
         if balance < min_balance:
             min_balance = balance
             min_balance_date = day

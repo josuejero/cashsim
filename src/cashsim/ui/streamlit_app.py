@@ -1,14 +1,10 @@
-# ruff: noqa: E402
 from __future__ import annotations
 
-# --- ensure src/ is importable even when the app file lives under src/cashsim/ui ---
 import sys
 from pathlib import Path
 
-_SRC = Path(__file__).resolve().parents[2]  # -> <repo>/src
-if str(_SRC) not in sys.path:
-    sys.path.insert(0, str(_SRC))
-# -------------------------------------------------------------------------------
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 
 import json
 import os
@@ -21,7 +17,7 @@ import streamlit as st
 from cashsim.analytics.break_even import break_even_grid
 from cashsim.analytics.snapshot import monthly_snapshot
 from cashsim.io.config_io import load_config, save_config
-from cashsim.io.gsheets import read_wishlist_by_url  # Google Sheets integration
+from cashsim.io.gsheets import read_wishlist_by_url
 from cashsim.models import Dials
 from cashsim.planning.planner import (
     constant_target_from_schedule,
@@ -42,16 +38,12 @@ from cashsim.ui.formatters import stringify_events_columns
 from cashsim.ui.state import dials_from_state, init_session_once
 from cashsim.utils.date_utils import next_due_date_cached as next_due_date
 
-# Pandas CoW: future-proof semantics and fewer hidden copies
 pd.options.mode.copy_on_write = True
 
 st.set_page_config(page_title="CashSim — Single Page", layout="wide")
 init_session_once()
 
 
-# ------------------
-# Helpers & caching
-# ------------------
 def _fingerprint(dials: Dials) -> str:
     """
     Stable, JSON-serializable fingerprint for Streamlit caching.
@@ -76,13 +68,9 @@ def run_break_even(dials_json: str, days: int = 31) -> pd.DataFrame:
 
 @st.cache_data(show_spinner=False)
 def _load_config_cached(path: str, mtime: float) -> Dials:
-    # mtime participates in the cache key so reads are invalidated when the file changes
     return load_config(path)
 
 
-# ------------
-# Renderers
-# ------------
 def render_inputs_tab() -> None:
     st.header("Inputs")
     st.subheader("Config I/O")
@@ -94,7 +82,7 @@ def render_inputs_tab() -> None:
         try:
             mtime = os.path.getmtime(cfg_path) if os.path.exists(cfg_path) else 0.0
             d = _load_config_cached(cfg_path, mtime)
-            # Hydrate session state from config
+
             st.session_state.update(
                 {
                     "current_cash": float(d.current_cash),
@@ -109,7 +97,6 @@ def render_inputs_tab() -> None:
                     "interest_mode": d.interest_mode,
                     "extra_strategy": d.extra_strategy,
                     "invest": d.invest.model_dump(),
-                    # Ensure datetime64[ns] dtype for blackouts editor
                     "blackouts_df": pd.DataFrame(
                         {"date": pd.to_datetime(getattr(d, "blackouts", []), errors="coerce")}
                     ),
@@ -147,10 +134,9 @@ def render_inputs_tab() -> None:
         except Exception as e:
             st.error(str(e))
 
-    # Prepare a Dials for download/save that includes blackouts
     def _dials_with_blackouts() -> Dials:
         base_dials = dials_from_state()
-        # Pull editor dates and coerce to date objects
+
         bdf = st.session_state.get("blackouts_df", pd.DataFrame({"date": []})).copy()
         if "date" not in bdf.columns:
             bdf["date"] = pd.Series([], dtype="datetime64[ns]")
@@ -233,7 +219,6 @@ def render_debt_tab() -> None:
     fingerprint = _fingerprint(dials)
     sim_df, _sim_metrics = run_sim(fingerprint, date.today(), 60)
 
-    # Build a flattened view of card events
     ev = sim_df.explode("cc_events", ignore_index=True)
     if bool("cc_events" in ev.columns and ev["cc_events"].notna().any()):
         base_df = ev.loc[ev["cc_events"].notna(), ["date", "cc_events"]].reset_index(drop=True)
@@ -420,7 +405,6 @@ def render_planner_tab() -> None:
         )
         cap = None if daily_cap_val <= 0 else float(daily_cap_val)
 
-        # --- Blackouts editor (robust dtype handling) ---
         st.markdown("**No-drive dates** (add rows as needed)")
         st.session_state.setdefault(
             "blackouts_df", pd.DataFrame({"date": pd.Series([], dtype="datetime64[ns]")})
@@ -462,7 +446,7 @@ def render_planner_tab() -> None:
             st.warning("Plan hits the daily cap on at least one day ...")
 
         if not df.empty:
-            df["date"] = pd.to_datetime(df["date"])  # ensure datetime index for charts
+            df["date"] = pd.to_datetime(df["date"])
 
             st.line_chart(
                 df.set_index("date")[["earn_required", "earn_capped"]],
@@ -494,7 +478,6 @@ def render_planner_tab() -> None:
                 },
             )
 
-            # constant target for working days
             const_target = constant_target_from_schedule(res_var.rows, planner_blackouts)
             st.metric(
                 "Constant target on working days",
@@ -526,10 +509,8 @@ def render_wishlist_tab() -> None:
             st.subheader("Wishlist data")
             st.dataframe(wish, use_container_width=True, hide_index=True)
 
-            # Build a day-by-day plan first (respecting blackouts)
             dials = dials_from_state()
 
-            # Coerce blackouts dtype then extract
             bdf = st.session_state.get("blackouts_df", pd.DataFrame({"date": []})).copy()
             if "date" not in bdf.columns:
                 bdf["date"] = pd.Series([], dtype="datetime64[ns]")
@@ -551,12 +532,11 @@ def render_wishlist_tab() -> None:
             )
             plan_df = pd.DataFrame([r.__dict__ for r in plan_for_wishlist.rows])
             plan_df["date"] = pd.to_datetime(plan_df["date"])
-            safe_floor = 0.0  # change to float(dials.safety_cushion) for cushion as the hard floor
+            safe_floor = 0.0
             plan_df["safe_surplus"] = (
                 plan_df["end_balance"] - (safe_floor + plan_df["reserve_7d_total"])
             ).round(2)
 
-            # Greedy fund by Priority (higher first)
             items = wish.sort_values(["Priority", "Item"], ascending=[False, True]).to_dict(
                 "records"
             )
@@ -604,9 +584,6 @@ def render_wishlist_tab() -> None:
             st.error(str(e))
 
 
-# ------------------
-# Title & Tabs
-# ------------------
 st.title("CashSim (single-page)")
 st.caption(
     "Edit inputs, bills, debt, and one-offs — then simulate and analyze break-even, "

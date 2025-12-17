@@ -12,10 +12,6 @@ from cashsim.sim.reserve import reserve_next_7_days
 from cashsim.sim.roll import sum_non_debt_bills_due_today
 from cashsim.utils.date_utils import next_due_date_cached as next_due_date
 
-# ---------------------------
-# Existing constant-target planner
-# ---------------------------
-
 
 @dataclass
 class PlanResult:
@@ -39,7 +35,7 @@ def plan_min_daily_earnings(
     (you can change the criterion to dials.safety_cushion if preferred).
     """
     start = start or date.today()
-    # Expand hi if necessary (guard)
+
     while True:
         test = dials.model_copy(update={"weekday_earnings": hi})
         _df, m = simulate_month(test, start=start, days=days)
@@ -49,7 +45,6 @@ def plan_min_daily_earnings(
         if hi > 1e6:
             return PlanResult(False, hi, m.min_balance, m.first_negative_date)
 
-    # Bisection
     best = hi
     while hi - lo > tol:
         mid = (lo + hi) / 2.0
@@ -61,28 +56,22 @@ def plan_min_daily_earnings(
         else:
             lo = mid
 
-    # Final simulate at best
     _df, m = simulate_month(
         dials.model_copy(update={"weekday_earnings": best}), start=start, days=days
     )
     return PlanResult(True, round(best, 2), m.min_balance, m.first_negative_date)
 
 
-# ---------------------------
-# New variable day-by-day planner
-# ---------------------------
-
-
 @dataclass
 class DailyPlanRow:
     date: date
-    earn_required: float  # minimum needed today
-    earn_capped: float  # applied after daily_cap (if any)
+    earn_required: float
+    earn_capped: float
     cap_exceeded: bool
-    end_balance: float  # projected end-of-day balance using earn_capped
-    reserve_7d_total: float  # next 7 days need (non-debt bills + mins + one-offs + gas)
+    end_balance: float
+    reserve_7d_total: float
     bills_today: float
-    mins_today: float  # CC + IOU mins paid today
+    mins_today: float
     oneoffs_today: float
     gas_fill_cost_today: float
     gas_bucket_end: float
@@ -90,7 +79,7 @@ class DailyPlanRow:
 
 @dataclass
 class DailyPlanResult:
-    ok: bool  # False if any day needed > daily_cap (when provided)
+    ok: bool
     min_balance: float
     min_balance_date: date | None
     rows: list[DailyPlanRow]
@@ -132,7 +121,6 @@ def _pay_today_side_effects(
     mins_today = 0.0
     oneoffs_today = 0.0
 
-    # CC mins (mutate balances)
     for c in cards:
         due = next_due_date(day, c.due_day)
         if due == day and c.balance > 0:
@@ -141,7 +129,6 @@ def _pay_today_side_effects(
             c.balance = round(c.balance - pay, 2)
             mins_today += pay
 
-    # IOU mins (mutate balances)
     for x in ious:
         if x.due_day is None:
             continue
@@ -152,7 +139,6 @@ def _pay_today_side_effects(
             x.balance = round(x.balance - pay, 2)
             mins_today += pay
 
-    # One-offs due exactly today
     for o in oneoffs:
         if o.due_date == day and o.amount > 0:
             oneoffs_today += o.amount
@@ -167,14 +153,13 @@ def plan_variable_daily_earnings(
     days: int = 60,
     safety_target: Literal["zero", "cushion"] = "zero",
     daily_cap: float | None = None,
-    future_daily_hint: float | None = None,  # <-- stays Optional
+    future_daily_hint: float | None = None,
     blackout_dates: Iterable[date] | None = None,
     tol: float = 0.01,
 ) -> DailyPlanResult:
     start = start or date.today()
     days = max(1, int(days))
 
-    # Resolve the optional, then use the resolved value everywhere.
     fh: float | None = future_daily_hint
     future_hint: float = float(fh) if fh is not None else float(dials.weekday_earnings)
     balance = float(dials.current_cash)
@@ -195,10 +180,8 @@ def plan_variable_daily_earnings(
         day = start + timedelta(days=i)
         is_blackout = day in blackout_set
 
-        # What hits today (non-debt bills computed separately)?
         nondebt_today = sum_non_debt_bills_due_today(day, bills)
 
-        # Peek mins/oneoffs due today without mutating real state
         cards_snapshot = [CreditCard(**c.model_dump()) for c in cards]
         ious_snapshot = [IOU(**x.model_dump()) for x in ious]
 
@@ -235,14 +218,13 @@ def plan_variable_daily_earnings(
             _ious: list[IOU] = ious,
             _oneoffs: list[OneOff] = oneoffs,
             _bills: list[Bill] = bills,
-            _future_hint: float = future_hint,  # << use the non-optional value
+            _future_hint: float = future_hint,
             _gas_pct: float = float(dials.gas_pct),
             _fill_size: float = float(dials.gas_fill_size),
         ) -> tuple[float, float, float, float, float]:
             """Tomorrow's 7-day reserve need after earning 'earn' and paying today's items."""
             b2, g2, _ = end_bal_if(earn)
 
-            # next-state snapshots (reflect today's mins/one-offs as paid)
             cards_next = [CreditCard(**c.model_dump()) for c in _cards]
             ious_next = [IOU(**x.model_dump()) for x in _ious]
             oneoffs_next = [OneOff(**o.model_dump()) for o in _oneoffs]
@@ -259,7 +241,7 @@ def plan_variable_daily_earnings(
                 locked_due_dates=None,
                 oneoff_saved=None,
                 gas_bucket=g2,
-                daily_earn=_future_hint,  # << already float
+                daily_earn=_future_hint,
                 gas_pct=_gas_pct,
                 fill_size=_fill_size,
             )
@@ -267,7 +249,6 @@ def plan_variable_daily_earnings(
             need = base + total7
             return round(need, 2), round(bills7, 2), round(mins7, 2), round(gas7, 2), b2
 
-        # earn_required
         if is_blackout:
             earn_required = 0.0
         else:
@@ -292,7 +273,6 @@ def plan_variable_daily_earnings(
                         lo = mid
             earn_required = round(best, 2)
 
-        # Apply cap if provided
         cap_exceeded = False
         earn_used = earn_required
         if daily_cap is not None:
@@ -301,7 +281,6 @@ def plan_variable_daily_earnings(
             if cap_exceeded:
                 ok = False
 
-        # Mutate real state using earn_used (or 0 if blackout) and pay today's items
         b2, g2, gas_fill_cost = apply_gas_skim_and_fillups(
             balance,
             gas_bucket,
@@ -309,19 +288,17 @@ def plan_variable_daily_earnings(
             dials.gas_pct,
             dials.gas_fill_size,
         )
-        # pay non-debt bills
+
         b2 -= nondebt_today
-        # pay mins + oneoffs (mutates card/IOU balances)
+
         _, mins_today, oneoffs_today = _pay_today_side_effects(day, cards, ious, oneoffs)
         b2 -= mins_today
         b2 -= oneoffs_today
 
-        # track minimum balance
         if b2 < min_balance:
             min_balance = round(b2, 2)
             min_balance_date = day
 
-        # Compute reserve 7d after applying today (for display only)
         total7, _, _, _ = reserve_next_7_days(
             day,
             bills=bills,
@@ -333,7 +310,7 @@ def plan_variable_daily_earnings(
             locked_due_dates=None,
             oneoff_saved=None,
             gas_bucket=g2,
-            daily_earn=future_hint,  # << not future_daily_hint
+            daily_earn=future_hint,
             gas_pct=dials.gas_pct,
             fill_size=dials.gas_fill_size,
         )
@@ -355,7 +332,6 @@ def plan_variable_daily_earnings(
             )
         )
 
-        # advance state
         balance = round(b2, 2)
         gas_bucket = round(g2, 2)
 

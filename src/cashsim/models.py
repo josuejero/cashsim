@@ -45,7 +45,7 @@ class OneOff(BaseModel):
     name: str = Field(min_length=1)
     due_date: date
     amount: float = Field(ge=0)
-    priority: int = 0  # higher = fund sooner
+    priority: int = 0
     must_pay: bool = True
 
     @field_validator("amount")
@@ -80,5 +80,5 @@ class Dials(BaseModel):
     invest: InvestmentSettings = InvestmentSettings()
     interest_mode: Literal["statement_adb", "due_simple"] = "statement_adb"
     extra_strategy: Literal["avalanche", "snowball"] = "avalanche"
-    # 👇 NEW: dates you cannot drive (earnings forced to 0 on these days in the planner)
+
     blackouts: list[date] = []

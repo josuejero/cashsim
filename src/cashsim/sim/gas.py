@@ -15,12 +15,10 @@ def apply_gas_skim_and_fillups(
     gas_skim = daily_earn * gas_pct
     new_bucket = gas_bucket + gas_skim
 
-    # How many discrete fillups were triggered today?
     fills_before = int(gas_bucket // fill_size)
     fills_after = int(new_bucket // fill_size)
     fills = max(0, fills_after - fills_before)
 
-    # Apply fillups and finish the day
     balance -= fills * fill_size
     gas_bucket = new_bucket - fills * fill_size
     balance += daily_earn - gas_skim

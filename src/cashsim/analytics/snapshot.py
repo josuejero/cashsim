@@ -33,7 +33,7 @@ def monthly_snapshot(dials: Dials, months: int = 1) -> Snapshot:
         first_ts = (pd.Timestamp(today).to_period("M") + k).to_timestamp()
         last_ts = (pd.Timestamp(today).to_period("M") + k + 1).to_timestamp()
 
-        workday_count = 20  # heuristic
+        workday_count = 20
         income = dials.weekday_earnings * workday_count
         gas = dials.weekday_earnings * dials.gas_pct * workday_count
         total_bills = sum(b.amount for b in dials.bills)

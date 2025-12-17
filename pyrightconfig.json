@@ -1,11 +1,17 @@
 {
   "typeCheckingMode": "standard",
   "executionEnvironments": [
-    { "root": "src" },
-    { "root": "./src" },
+    {
+      "root": "src"
+    },
+    {
+      "root": "./src"
+    },
     {
       "root": "./tests",
-      "extraPaths": ["./src"]
+      "extraPaths": [
+        "./src"
+      ]
     }
   ],
   "useLibraryCodeForTypes": true,
@@ -23,10 +29,14 @@
   "reportUntypedFunctionDecorator": "warning",
   "reportUnusedVariable": "warning",
   "reportCallIssue": "warning",
-  "include": ["src", "tests"],
-  "extraPaths": ["src"],
+  "include": [
+    "src",
+    "tests"
+  ],
+  "extraPaths": [
+    "src"
+  ],
   "pythonVersion": "3.14",
   "venvPath": ".",
   "venv": ".venv"
 }
-

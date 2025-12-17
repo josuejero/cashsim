@@ -17,7 +17,7 @@ def accrue_adb_daily(card_state: dict[str, dict], cards: list[CreditCard]) -> No
         st = card_state[c.name]
         st["adb_sum"] = float(D(st.get("adb_sum", 0)) + D(c.balance))
         st["adb_days"] = int(st.get("adb_days", 0)) + 1
-        # Unposted interest estimate (not booked): (APR/365) * balance
+
         st["unposted_interest_est"] = float(
             D(st.get("unposted_interest_est", 0)) + (D(c.apr) / D(365)) * D(c.balance)
         )

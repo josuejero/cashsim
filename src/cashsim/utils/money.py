@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from decimal import ROUND_HALF_UP, Decimal
 
-# One "cent" quantum for money rounding.
 CENT = Decimal("0.01")
 
 
@@ -38,9 +37,6 @@ def round_cents(x: float | str | Decimal) -> float:
     return float(quantize_cents(D(x), rounding=ROUND_HALF_UP))
 
 
-# --- Drop-in helpers (Decimal everywhere for interest posting) ---
-# See: Python decimal & quantize for exact-money rounding (HALF_UP is typical for statements).
-# https://docs.python.org/3/library/decimal.html
 def round_money(x: Decimal) -> Decimal:
     return quantize_cents(D(x), rounding=ROUND_HALF_UP)
 

@@ -7,7 +7,7 @@ import google.auth
 import gspread
 import pandas as pd
 import streamlit as st
-from google.auth.credentials import Credentials  # base interface
+from google.auth.credentials import Credentials
 from google.oauth2 import service_account
 from gspread_dataframe import (
     get_as_dataframe,
@@ -24,13 +24,12 @@ def _choose_creds(*, readonly: bool, sa_info: Mapping[str, Any] | None) -> Crede
     """Prefer st.secrets if provided; otherwise fall back to ADC (keyless on GCP)."""
     scopes = SHEETS_READONLY if readonly else SHEETS_RW
     if sa_info:
-        # Accept dict-like service account info (e.g., from secrets or env) and scope it.
         return service_account.Credentials.from_service_account_info(dict(sa_info), scopes=scopes)
     if "gcp_service_account" in st.secrets:
         return service_account.Credentials.from_service_account_info(
             dict(st.secrets["gcp_service_account"]), scopes=scopes
         )
-    # On GCP, this uses the attached service account; locally it can pick up user creds.
+
     creds, _ = google.auth.default(scopes=scopes)
     return cast(Credentials, creds)
 
@@ -42,7 +41,6 @@ def gs_client(sa_info: Mapping[str, Any] | None = None, *, readonly: bool = True
     return gspread.authorize(creds)
 
 
-# ---------- FAST READ: batch ranges in one HTTP call ----------
 @cache_data(show_spinner=False)
 def batch_read_values(
     sheet_url: str, ranges: list[str], sa_info: Mapping[str, Any] | None = None
@@ -56,13 +54,12 @@ def batch_read_values(
     out: dict[str, list[list[Any]]] = {}
     for vr in resp.get("valueRanges", []):
         out[vr.get("range", "")] = vr.get("values", [])
-    # ensure all requested ranges are present (possibly empty)
+
     for r in ranges:
         out.setdefault(r, [])
     return out
 
 
-# ---------- FAST WRITE: batch updates in one HTTP call ----------
 def batch_write_values(
     sheet_url: str,
     value_ranges: list[dict[str, Any]],
@@ -79,7 +76,6 @@ def batch_write_values(
     return sh.values_batch_update(body)
 
 
-# ---------- Convenience: read a wishlist tab the old way (kept for UI call site) ----------
 @cache_data(show_spinner=False)
 def read_wishlist_by_url(
     sheet_url: str, worksheet_name: str, sa_info: Mapping[str, Any] | None = None
@@ -109,7 +105,6 @@ def read_wishlist_by_url(
     return df[wanted]
 
 
-# ---------- Convenience: write a DataFrame in (usually) a single update ----------
 def write_dataframe(
     sheet_url: str,
     worksheet_name: str,
@@ -126,7 +121,7 @@ def write_dataframe(
     set_with_dataframe(ws, df, include_index=False, include_column_header=True, resize=True)
 
 
-@cache_data(show_spinner=False)  # cache raw transaction pull
+@cache_data(show_spinner=False)
 def load_transactions(sheet_url: str) -> pd.DataFrame:
     gc = gs_client(sa_info=None, readonly=True)
     ws = gc.open_by_url(sheet_url).worksheet("Sheet1")

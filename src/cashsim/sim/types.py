@@ -1,13 +1,10 @@
-# File: src/cashsim/sim/types.py
 from __future__ import annotations
 
-# NOTE: We intentionally import NotRequired from typing_extensions so this file
-# type-checks on Python < 3.11. We prevent Ruff's pyupgrade from rewriting this.
 from dataclasses import dataclass
 from datetime import date
 from typing import Literal
 
-from typing_extensions import NotRequired, TypedDict  # ruff: noqa
+from typing_extensions import NotRequired, TypedDict
 
 
 class BaseEvent(TypedDict):
@@ -39,7 +36,6 @@ class ExtraEvent(BaseEvent):
 Event = FinanceEvent | MinEvent | ExtraEvent
 
 
-# minimal card-state shape for runtime helpers
 class CardState(TypedDict, total=False):
     balance: float
     adb_days: float

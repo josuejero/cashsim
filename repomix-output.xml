@@ -40,6 +40,8 @@ The content is organized as follows:
 </file_summary>
 
 <directory_structure>
+.devcontainer/
+  devcontainer.json
 .github/
   workflows/
     ci.yml
@@ -128,6 +130,41 @@ requirements.txt
 
 <files>
 This section contains the contents of the repository's files.
+
+<file path=".devcontainer/devcontainer.json">
+{
+  "name": "Python 3",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.11-bookworm",
+  "customizations": {
+    "codespaces": {
+      "openFiles": [
+        "README.md",
+        "src/cashsim/ui/streamlit_app.py"
+      ]
+    },
+    "vscode": {
+      "settings": {},
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ]
+    }
+  },
+  "updateContentCommand": "[ -f packages.txt ] && sudo apt update && sudo apt upgrade -y && sudo xargs apt install -y <packages.txt; [ -f requirements.txt ] && pip3 install --user -r requirements.txt; pip3 install --user streamlit; echo '✅ Packages installed and Requirements met'",
+  "postAttachCommand": {
+    "server": "streamlit run src/cashsim/ui/streamlit_app.py --server.enableCORS false --server.enableXsrfProtection false"
+  },
+  "portsAttributes": {
+    "8501": {
+      "label": "Application",
+      "onAutoForward": "openPreview"
+    }
+  },
+  "forwardPorts": [
+    8501
+  ]
+}
+</file>
 
 <file path=".hypothesis/constants/05003b5d7106c082">
 # file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/models.py
@@ -559,12 +596,10 @@ def apply_gas_skim_and_fillups(
     gas_skim = daily_earn * gas_pct
     new_bucket = gas_bucket + gas_skim
 
-    # How many discrete fillups were triggered today?
     fills_before = int(gas_bucket // fill_size)
     fills_after = int(new_bucket // fill_size)
     fills = max(0, fills_after - fills_before)
 
-    # Apply fillups and finish the day
     balance -= fills * fill_size
     gas_bucket = new_bucket - fills * fill_size
     balance += daily_earn - gas_skim
@@ -676,11 +711,11 @@ import streamlit as st
 
 F = TypeVar("F", bound=Callable[..., Any])
 
-# A cache decorator factory returns a decorator that preserves the wrapped signature.
+
 Decorator = Callable[[F], F]
 Factory = Callable[..., Decorator]
 
-# Streamlit provides decorator factories; we narrow types for checkers.
+
 cache_data = cast(Factory, st.cache_data)
 cache_resource = cast(Factory, st.cache_resource)
 </file>
@@ -689,7 +724,7 @@ cache_resource = cast(Factory, st.cache_resource)
 from __future__ import annotations
 
 DAYS_PER_YEAR = 365
-CARD_ACT_MIN_DAYS = 21  # typical minimum days between statement close and due date
+CARD_ACT_MIN_DAYS = 21
 </file>
 
 <file path="tests/test_property_adb.py">
@@ -714,7 +749,6 @@ def _adb_interest(daily_balances: list[Decimal], apr: Decimal) -> Decimal:
     apr=st.decimals(min_value=0, max_value=Decimal("0.5"), places=4),
 )
 def test_adb_identity_property(daily: list[Decimal], apr: Decimal) -> None:
-    # Identity: sum(balances) * daily_rate  ==  ADB * daily_rate * days
     daily = [Decimal(str(x)) for x in daily]
     daily_rate = D(apr) / D(365)
     lhs = quantize_cents(sum((D(b) * daily_rate for b in daily), D("0")))
@@ -828,20 +862,6 @@ cashsim.utils.money
     "encoding": "o200k_base"
   }
 }
-</file>
-
-<file path="requirements.txt">
--e .
-
-# requirements.txt (third-party deps)
-pydantic>=2.10,<3
-pandas>=2.2.3,<3.0
-python-dateutil>=2.9.0.post0
-streamlit>=1.49,<2.0
-pyarrow>=21,<22
-gspread>=6,<7
-google-auth>=2.0
-gspread-dataframe>=2.0.0
 </file>
 
 <file path="src/cashsim/analytics/break_even.py">
@@ -1104,7 +1124,7 @@ class OneOff(BaseModel):
     name: str = Field(min_length=1)
     due_date: date
     amount: float = Field(ge=0)
-    priority: int = 0  # higher = fund sooner
+    priority: int = 0
     must_pay: bool = True
 
     @field_validator("amount")
@@ -1139,7 +1159,7 @@ class Dials(BaseModel):
     invest: InvestmentSettings = InvestmentSettings()
     interest_mode: Literal["statement_adb", "due_simple"] = "statement_adb"
     extra_strategy: Literal["avalanche", "snowball"] = "avalanche"
-    # 👇 NEW: dates you cannot drive (earnings forced to 0 on these days in the planner)
+
     blackouts: list[date] = []
 </file>
 
@@ -1150,6 +1170,20 @@ class Dials(BaseModel):
 # tmp/
 .streamlit/secrets.toml
 monkeytype.sqlite3
+</file>
+
+<file path="requirements.txt">
+-e .
+
+# requirements.txt (third-party deps)
+pydantic>=2.10,<3
+pandas>=2.2.3,<3.0
+python-dateutil>=2.9.0.post0
+streamlit>=1.49,<2.0
+pyarrow>=21,<22
+gspread>=6,<7
+google-auth>=2.0
+gspread-dataframe>=2.0.0
 </file>
 
 <file path="src/cashsim/analytics/snapshot.py">
@@ -1188,7 +1222,7 @@ def monthly_snapshot(dials: Dials, months: int = 1) -> Snapshot:
         first_ts = (pd.Timestamp(today).to_period("M") + k).to_timestamp()
         last_ts = (pd.Timestamp(today).to_period("M") + k + 1).to_timestamp()
 
-        workday_count = 20  # heuristic
+        workday_count = 20
         income = dials.weekday_earnings * workday_count
         gas = dials.weekday_earnings * dials.gas_pct * workday_count
         total_bills = sum(b.amount for b in dials.bills)
@@ -1251,7 +1285,6 @@ def simulate_month(
     ious: list[IOU] = [IOU(**x.model_dump()) for x in dials.ious]
     oneoffs: list[OneOff] = [OneOff(**o.model_dump()) for o in getattr(dials, "oneoffs", [])]
 
-    # per-card state
     card_state: dict[str, dict] = {}
     for c in cards:
         cycle_start = last_statement_close_date(start, c.due_day, c.statement_day)
@@ -1292,18 +1325,15 @@ def simulate_month(
         day = start + timedelta(days=i)
         earn = float(dials.weekday_earnings)
 
-        # GAS
         balance, gas_bucket, fillups = apply_gas_skim_and_fillups(
             balance, gas_bucket, earn, dials.gas_pct, dials.gas_fill_size
         )
 
-        # BILLS (non-debt)
         bill_due_today = sum_non_debt_bills_due_today(day, bills)
         if bill_due_today > 0:
             balance -= bill_due_today
             paid_non_debt_bills += bill_due_today
 
-        # ---------- one-off contributions from surplus ----------
         oneoff_contrib_events: list[tuple[str, float]] = []
         total_now, _, _, gas_pred_now = reserve_next_7_days(
             day,
@@ -1338,7 +1368,6 @@ def simulate_month(
                 remaining = round(remaining - contrib, 2)
                 oneoff_contrib_events.append((o.name, contrib))
 
-        # ---------- pay one-offs on due date ----------
         oneoff_paid_events: list[tuple[str, float]] = []
         for o in oneoffs:
             if (not oneoff_paid[o.name]) and (day == o.due_date):
@@ -1351,7 +1380,6 @@ def simulate_month(
                 oneoff_paid_events.append((o.name, o.amount))
                 paid_oneoffs_total = round(paid_oneoffs_total + o.amount, 2)
 
-        # ---------- cards ----------
         interest_events: list[tuple[str, float]] = []
         minpay_events: list[tuple[str, float]] = []
         extra_on_due_events: list[tuple[str, float]] = []
@@ -1363,13 +1391,12 @@ def simulate_month(
         if dials.interest_mode == "statement_adb":
             for acc, amt in post_statement_charges_and_advance(day, card_state, cards):
                 interest_events.append((acc, amt))
-                # event entry
+
                 for c in cards:
                     if c.name == acc:
                         add_finance_event(unified_events, day, acc, amt, c.balance)
                         break
 
-        # due date: mins + extras
         due_today = [c for c in cards if next_due_date(day, c.due_day) == day and c.balance > 0]
         if due_today:
             locked_mins = {
@@ -1378,7 +1405,6 @@ def simulate_month(
                 if st["min_due_locked"] is not None
             }
 
-            # minimums
             for c in due_today:
                 locked = locked_mins.get(c.name)
                 due_min = (
@@ -1449,7 +1475,6 @@ def simulate_month(
                     if dials.interest_mode == "statement_adb":
                         card_state[c.name]["payments_since_stmt"] += extra
 
-            # set grace flags
             if dials.interest_mode == "statement_adb":
                 for c in due_today:
                     st = card_state[c.name]
@@ -1466,7 +1491,6 @@ def simulate_month(
                         add_finance_event(unified_events, day, acc, amt, c.balance)
                         break
 
-        # extremes
         if balance < min_balance:
             min_balance = balance
             min_balance_date = day
@@ -1551,7 +1575,7 @@ def accrue_adb_daily(card_state: dict[str, dict], cards: list[CreditCard]) -> No
         st = card_state[c.name]
         st["adb_sum"] = float(D(st.get("adb_sum", 0)) + D(c.balance))
         st["adb_days"] = int(st.get("adb_days", 0)) + 1
-        # Unposted interest estimate (not booked): (APR/365) * balance
+
         st["unposted_interest_est"] = float(
             D(st.get("unposted_interest_est", 0)) + (D(c.apr) / D(365)) * D(c.balance)
         )
@@ -1731,7 +1755,7 @@ def oneoff_editor(df: pd.DataFrame, key: str | int | None = "oneoff_editor") -> 
 <file path="src/cashsim/ui/formatters.py">
 from __future__ import annotations
 
-from collections.abc import Iterable  # NEW
+from collections.abc import Iterable
 from typing import cast
 
 import pandas as pd
@@ -1743,7 +1767,7 @@ def stringify_events_columns(df: pd.DataFrame) -> pd.DataFrame:
     def _fmt_pair_list(v: object) -> str:
         if isinstance(v, (list, tuple)) and len(v) > 0:
             try:
-                pairs = cast(Iterable[tuple[str, float]], v)  # NEW
+                pairs = cast(Iterable[tuple[str, float]], v)
                 return "; ".join(f"{name}: ${float(amt):,.2f}" for (name, amt) in pairs)
             except Exception:
                 return str(v)
@@ -1930,16 +1954,15 @@ __all__ = [
 def __getattr__(
     name: str,
 ) -> Bill | CreditCard | IOU | OneOff | InvestmentSettings | Dials | SimMetrics | type:
-    # Lightweight models
     if name in {"Bill", "CreditCard", "IOU", "OneOff", "InvestmentSettings", "Dials"}:
         m = import_module(".models", __name__)
         return getattr(m, name)
-    # Simulation + types
+
     if name == "simulate_month":
         return import_module(".sim.core", __name__).simulate_month
     if name == "SimMetrics":
         return import_module(".sim.types", __name__).SimMetrics
-    # Analytics
+
     if name == "break_even_grid":
         return import_module(".analytics.break_even", __name__).break_even_grid
     if name == "monthly_snapshot":
@@ -1954,16 +1977,11 @@ from cashsim.utils.money import D, quantize_cents
 
 
 def test_rounding_modes_examples() -> None:
-    # .5 ties differ by mode: HALF_UP vs HALF_EVEN ("banker's")
     assert quantize_cents(Decimal("1.005"), rounding=ROUND_HALF_UP) == Decimal("1.01")
     assert quantize_cents(Decimal("1.015"), rounding=ROUND_HALF_EVEN) == Decimal("1.02")
 
 
 def test_adb_property_equivalence() -> None:
-    # ADB identity:
-    # interest = average_daily_balance × daily_rate × days_in_cycle
-    # average_daily_balance = sum(daily_balances)/days_in_cycle
-    # => same as quantize(sum(daily_balances) * daily_rate)
     daily = [Decimal("100.00")] * 15 + [Decimal("200.00")] * 15
     days = Decimal(len(daily))
     apr = Decimal("0.2199")
@@ -2015,12 +2033,10 @@ repos:
 </file>
 
 <file path="mypy.ini">
-# mypy.ini
 [mypy]
 python_version = 3.12
 warn_unused_ignores = True
 
-# Third-party packages that aren’t always present in CI.
 [mypy-streamlit.*]
 ignore_missing_imports = True
 
@@ -2039,9 +2055,6 @@ ignore_missing_imports = True
 [mypy-typing_extensions.*]
 ignore_missing_imports = True
 
-# NEW: tests import Hypothesis; it isn't installed in some environments.
-# Per-module ignore is the recommended approach when stubs or packages may be absent.
-# See mypy docs on ignoring missing imports. :contentReference[oaicite:1]{index=1}
 [mypy-hypothesis.*]
 ignore_missing_imports = True
 </file>
@@ -2141,10 +2154,6 @@ from cashsim.sim.reserve import reserve_next_7_days
 from cashsim.sim.roll import sum_non_debt_bills_due_today
 from cashsim.utils.date_utils import next_due_date_cached as next_due_date
 
-# ---------------------------
-# Existing constant-target planner
-# ---------------------------
-
 
 @dataclass
 class PlanResult:
@@ -2168,7 +2177,7 @@ def plan_min_daily_earnings(
     (you can change the criterion to dials.safety_cushion if preferred).
     """
     start = start or date.today()
-    # Expand hi if necessary (guard)
+
     while True:
         test = dials.model_copy(update={"weekday_earnings": hi})
         _df, m = simulate_month(test, start=start, days=days)
@@ -2178,7 +2187,6 @@ def plan_min_daily_earnings(
         if hi > 1e6:
             return PlanResult(False, hi, m.min_balance, m.first_negative_date)
 
-    # Bisection
     best = hi
     while hi - lo > tol:
         mid = (lo + hi) / 2.0
@@ -2190,28 +2198,22 @@ def plan_min_daily_earnings(
         else:
             lo = mid
 
-    # Final simulate at best
     _df, m = simulate_month(
         dials.model_copy(update={"weekday_earnings": best}), start=start, days=days
     )
     return PlanResult(True, round(best, 2), m.min_balance, m.first_negative_date)
 
 
-# ---------------------------
-# New variable day-by-day planner
-# ---------------------------
-
-
 @dataclass
 class DailyPlanRow:
     date: date
-    earn_required: float  # minimum needed today
-    earn_capped: float  # applied after daily_cap (if any)
+    earn_required: float
+    earn_capped: float
     cap_exceeded: bool
-    end_balance: float  # projected end-of-day balance using earn_capped
-    reserve_7d_total: float  # next 7 days need (non-debt bills + mins + one-offs + gas)
+    end_balance: float
+    reserve_7d_total: float
     bills_today: float
-    mins_today: float  # CC + IOU mins paid today
+    mins_today: float
     oneoffs_today: float
     gas_fill_cost_today: float
     gas_bucket_end: float
@@ -2219,7 +2221,7 @@ class DailyPlanRow:
 
 @dataclass
 class DailyPlanResult:
-    ok: bool  # False if any day needed > daily_cap (when provided)
+    ok: bool
     min_balance: float
     min_balance_date: date | None
     rows: list[DailyPlanRow]
@@ -2261,7 +2263,6 @@ def _pay_today_side_effects(
     mins_today = 0.0
     oneoffs_today = 0.0
 
-    # CC mins (mutate balances)
     for c in cards:
         due = next_due_date(day, c.due_day)
         if due == day and c.balance > 0:
@@ -2270,7 +2271,6 @@ def _pay_today_side_effects(
             c.balance = round(c.balance - pay, 2)
             mins_today += pay
 
-    # IOU mins (mutate balances)
     for x in ious:
         if x.due_day is None:
             continue
@@ -2281,7 +2281,6 @@ def _pay_today_side_effects(
             x.balance = round(x.balance - pay, 2)
             mins_today += pay
 
-    # One-offs due exactly today
     for o in oneoffs:
         if o.due_date == day and o.amount > 0:
             oneoffs_today += o.amount
@@ -2296,14 +2295,13 @@ def plan_variable_daily_earnings(
     days: int = 60,
     safety_target: Literal["zero", "cushion"] = "zero",
     daily_cap: float | None = None,
-    future_daily_hint: float | None = None,  # <-- stays Optional
+    future_daily_hint: float | None = None,
     blackout_dates: Iterable[date] | None = None,
     tol: float = 0.01,
 ) -> DailyPlanResult:
     start = start or date.today()
     days = max(1, int(days))
 
-    # Resolve the optional, then use the resolved value everywhere.
     fh: float | None = future_daily_hint
     future_hint: float = float(fh) if fh is not None else float(dials.weekday_earnings)
     balance = float(dials.current_cash)
@@ -2324,10 +2322,8 @@ def plan_variable_daily_earnings(
         day = start + timedelta(days=i)
         is_blackout = day in blackout_set
 
-        # What hits today (non-debt bills computed separately)?
         nondebt_today = sum_non_debt_bills_due_today(day, bills)
 
-        # Peek mins/oneoffs due today without mutating real state
         cards_snapshot = [CreditCard(**c.model_dump()) for c in cards]
         ious_snapshot = [IOU(**x.model_dump()) for x in ious]
 
@@ -2364,14 +2360,13 @@ def plan_variable_daily_earnings(
             _ious: list[IOU] = ious,
             _oneoffs: list[OneOff] = oneoffs,
             _bills: list[Bill] = bills,
-            _future_hint: float = future_hint,  # << use the non-optional value
+            _future_hint: float = future_hint,
             _gas_pct: float = float(dials.gas_pct),
             _fill_size: float = float(dials.gas_fill_size),
         ) -> tuple[float, float, float, float, float]:
             """Tomorrow's 7-day reserve need after earning 'earn' and paying today's items."""
             b2, g2, _ = end_bal_if(earn)
 
-            # next-state snapshots (reflect today's mins/one-offs as paid)
             cards_next = [CreditCard(**c.model_dump()) for c in _cards]
             ious_next = [IOU(**x.model_dump()) for x in _ious]
             oneoffs_next = [OneOff(**o.model_dump()) for o in _oneoffs]
@@ -2388,7 +2383,7 @@ def plan_variable_daily_earnings(
                 locked_due_dates=None,
                 oneoff_saved=None,
                 gas_bucket=g2,
-                daily_earn=_future_hint,  # << already float
+                daily_earn=_future_hint,
                 gas_pct=_gas_pct,
                 fill_size=_fill_size,
             )
@@ -2396,7 +2391,6 @@ def plan_variable_daily_earnings(
             need = base + total7
             return round(need, 2), round(bills7, 2), round(mins7, 2), round(gas7, 2), b2
 
-        # earn_required
         if is_blackout:
             earn_required = 0.0
         else:
@@ -2421,7 +2415,6 @@ def plan_variable_daily_earnings(
                         lo = mid
             earn_required = round(best, 2)
 
-        # Apply cap if provided
         cap_exceeded = False
         earn_used = earn_required
         if daily_cap is not None:
@@ -2430,7 +2423,6 @@ def plan_variable_daily_earnings(
             if cap_exceeded:
                 ok = False
 
-        # Mutate real state using earn_used (or 0 if blackout) and pay today's items
         b2, g2, gas_fill_cost = apply_gas_skim_and_fillups(
             balance,
             gas_bucket,
@@ -2438,19 +2430,17 @@ def plan_variable_daily_earnings(
             dials.gas_pct,
             dials.gas_fill_size,
         )
-        # pay non-debt bills
+
         b2 -= nondebt_today
-        # pay mins + oneoffs (mutates card/IOU balances)
+
         _, mins_today, oneoffs_today = _pay_today_side_effects(day, cards, ious, oneoffs)
         b2 -= mins_today
         b2 -= oneoffs_today
 
-        # track minimum balance
         if b2 < min_balance:
             min_balance = round(b2, 2)
             min_balance_date = day
 
-        # Compute reserve 7d after applying today (for display only)
         total7, _, _, _ = reserve_next_7_days(
             day,
             bills=bills,
@@ -2462,7 +2452,7 @@ def plan_variable_daily_earnings(
             locked_due_dates=None,
             oneoff_saved=None,
             gas_bucket=g2,
-            daily_earn=future_hint,  # << not future_daily_hint
+            daily_earn=future_hint,
             gas_pct=dials.gas_pct,
             fill_size=dials.gas_fill_size,
         )
@@ -2484,7 +2474,6 @@ def plan_variable_daily_earnings(
             )
         )
 
-        # advance state
         balance = round(b2, 2)
         gas_bucket = round(g2, 2)
 
@@ -2509,16 +2498,13 @@ def constant_target_from_schedule(
 </file>
 
 <file path="src/cashsim/sim/types.py">
-# File: src/cashsim/sim/types.py
 from __future__ import annotations
 
-# NOTE: We intentionally import NotRequired from typing_extensions so this file
-# type-checks on Python < 3.11. We prevent Ruff's pyupgrade from rewriting this.
 from dataclasses import dataclass
 from datetime import date
 from typing import Literal
 
-from typing_extensions import NotRequired, TypedDict  # ruff: noqa
+from typing_extensions import NotRequired, TypedDict
 
 
 class BaseEvent(TypedDict):
@@ -2550,7 +2536,6 @@ class ExtraEvent(BaseEvent):
 Event = FinanceEvent | MinEvent | ExtraEvent
 
 
-# minimal card-state shape for runtime helpers
 class CardState(TypedDict, total=False):
     balance: float
     adb_days: float
@@ -2575,7 +2560,6 @@ from __future__ import annotations
 
 from decimal import ROUND_HALF_UP, Decimal
 
-# One "cent" quantum for money rounding.
 CENT = Decimal("0.01")
 
 
@@ -2611,9 +2595,6 @@ def round_cents(x: float | str | Decimal) -> float:
     return float(quantize_cents(D(x), rounding=ROUND_HALF_UP))
 
 
-# --- Drop-in helpers (Decimal everywhere for interest posting) ---
-# See: Python decimal & quantize for exact-money rounding (HALF_UP is typical for statements).
-# https://docs.python.org/3/library/decimal.html
 def round_money(x: Decimal) -> Decimal:
     return quantize_cents(D(x), rounding=ROUND_HALF_UP)
 
@@ -2631,15 +2612,13 @@ from importlib import import_module
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    # editor-only hint; avoids hard dependency during type checking
-    from streamlit.web import cli as _stcli  # noqa: F401
+    pass
 
 
 def st_main() -> None:
-    # Lazy import so CI/mypy don’t need streamlit installed
     stcli = import_module("streamlit.web.cli")
     sys.argv = ["streamlit", "run", "src/cashsim/ui/streamlit_app.py", "--server.headless=true"]
-    stcli.main()  # removed: type: ignore[attr-defined]
+    stcli.main()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -2723,38 +2702,6 @@ jobs:
       - name: Pytest (3.12 only)
         if: matrix.python-version == '3.12'
         run: pytest -q
-</file>
-
-<file path="pyrightconfig.json">
-{
-  "typeCheckingMode": "standard",
-  "executionEnvironments": [
-    { "root": "src" },
-    { "root": "./src" },
-    {
-      "root": "./tests",
-      "extraPaths": ["./src"]
-    }
-  ],
-  "useLibraryCodeForTypes": true,
-  "reportUnknownVariableType": "warning",
-  "reportUnknownMemberType": "warning",
-  "reportUnknownArgumentType": "warning",
-  "reportUnknownParameterType": "warning",
-  "reportUnknownLambdaType": "warning",
-  "reportMissingTypeStubs": "warning",
-  "reportMissingTypeArgument": "warning",
-  "reportMissingParameterType": "warning",
-  "reportArgumentType": "warning",
-  "reportAttributeAccessIssue": "warning",
-  "reportMissingImports": "warning",
-  "reportUntypedFunctionDecorator": "warning",
-  "reportUnusedVariable": "warning",
-  "reportCallIssue": "warning",
-  "include": ["src", "tests"],
-  "extraPaths": ["src"],
-  "pythonVersion": "3.12"
-}
 </file>
 
 <file path="pyproject.toml">
@@ -2844,6 +2791,51 @@ allow-star-arg-any = true
 "src/cashsim/sim/types.py" = ["UP"]
 </file>
 
+<file path="pyrightconfig.json">
+{
+  "typeCheckingMode": "standard",
+  "executionEnvironments": [
+    {
+      "root": "src"
+    },
+    {
+      "root": "./src"
+    },
+    {
+      "root": "./tests",
+      "extraPaths": [
+        "./src"
+      ]
+    }
+  ],
+  "useLibraryCodeForTypes": true,
+  "reportUnknownVariableType": "warning",
+  "reportUnknownMemberType": "warning",
+  "reportUnknownArgumentType": "warning",
+  "reportUnknownParameterType": "warning",
+  "reportUnknownLambdaType": "warning",
+  "reportMissingTypeStubs": "warning",
+  "reportMissingTypeArgument": "warning",
+  "reportMissingParameterType": "warning",
+  "reportArgumentType": "warning",
+  "reportAttributeAccessIssue": "warning",
+  "reportMissingImports": "warning",
+  "reportUntypedFunctionDecorator": "warning",
+  "reportUnusedVariable": "warning",
+  "reportCallIssue": "warning",
+  "include": [
+    "src",
+    "tests"
+  ],
+  "extraPaths": [
+    "src"
+  ],
+  "pythonVersion": "3.14",
+  "venvPath": ".",
+  "venv": ".venv"
+}
+</file>
+
 <file path="src/cashsim/io/gsheets.py">
 from __future__ import annotations
 
@@ -2854,7 +2846,7 @@ import google.auth
 import gspread
 import pandas as pd
 import streamlit as st
-from google.auth.credentials import Credentials  # base interface
+from google.auth.credentials import Credentials
 from google.oauth2 import service_account
 from gspread_dataframe import (
     get_as_dataframe,
@@ -2871,13 +2863,12 @@ def _choose_creds(*, readonly: bool, sa_info: Mapping[str, Any] | None) -> Crede
     """Prefer st.secrets if provided; otherwise fall back to ADC (keyless on GCP)."""
     scopes = SHEETS_READONLY if readonly else SHEETS_RW
     if sa_info:
-        # Accept dict-like service account info (e.g., from secrets or env) and scope it.
         return service_account.Credentials.from_service_account_info(dict(sa_info), scopes=scopes)
     if "gcp_service_account" in st.secrets:
         return service_account.Credentials.from_service_account_info(
             dict(st.secrets["gcp_service_account"]), scopes=scopes
         )
-    # On GCP, this uses the attached service account; locally it can pick up user creds.
+
     creds, _ = google.auth.default(scopes=scopes)
     return cast(Credentials, creds)
 
@@ -2889,7 +2880,6 @@ def gs_client(sa_info: Mapping[str, Any] | None = None, *, readonly: bool = True
     return gspread.authorize(creds)
 
 
-# ---------- FAST READ: batch ranges in one HTTP call ----------
 @cache_data(show_spinner=False)
 def batch_read_values(
     sheet_url: str, ranges: list[str], sa_info: Mapping[str, Any] | None = None
@@ -2903,13 +2893,12 @@ def batch_read_values(
     out: dict[str, list[list[Any]]] = {}
     for vr in resp.get("valueRanges", []):
         out[vr.get("range", "")] = vr.get("values", [])
-    # ensure all requested ranges are present (possibly empty)
+
     for r in ranges:
         out.setdefault(r, [])
     return out
 
 
-# ---------- FAST WRITE: batch updates in one HTTP call ----------
 def batch_write_values(
     sheet_url: str,
     value_ranges: list[dict[str, Any]],
@@ -2926,7 +2915,6 @@ def batch_write_values(
     return sh.values_batch_update(body)
 
 
-# ---------- Convenience: read a wishlist tab the old way (kept for UI call site) ----------
 @cache_data(show_spinner=False)
 def read_wishlist_by_url(
     sheet_url: str, worksheet_name: str, sa_info: Mapping[str, Any] | None = None
@@ -2956,7 +2944,6 @@ def read_wishlist_by_url(
     return df[wanted]
 
 
-# ---------- Convenience: write a DataFrame in (usually) a single update ----------
 def write_dataframe(
     sheet_url: str,
     worksheet_name: str,
@@ -2973,7 +2960,7 @@ def write_dataframe(
     set_with_dataframe(ws, df, include_index=False, include_column_header=True, resize=True)
 
 
-@cache_data(show_spinner=False)  # cache raw transaction pull
+@cache_data(show_spinner=False)
 def load_transactions(sheet_url: str) -> pd.DataFrame:
     gc = gs_client(sa_info=None, readonly=True)
     ws = gc.open_by_url(sheet_url).worksheet("Sheet1")
@@ -2982,17 +2969,15 @@ def load_transactions(sheet_url: str) -> pd.DataFrame:
 </file>
 
 <file path="src/cashsim/ui/streamlit_app.py">
-# ruff: noqa: E402
 from __future__ import annotations
 
-# --- ensure src/ is importable even when the app file lives under src/cashsim/ui ---
 import sys
 from pathlib import Path
 
-_SRC = Path(__file__).resolve().parents[2]  # -> <repo>/src
+_SRC = Path(__file__).resolve().parents[2]
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
-# -------------------------------------------------------------------------------
+
 
 import json
 import os
@@ -3005,7 +2990,7 @@ import streamlit as st
 from cashsim.analytics.break_even import break_even_grid
 from cashsim.analytics.snapshot import monthly_snapshot
 from cashsim.io.config_io import load_config, save_config
-from cashsim.io.gsheets import read_wishlist_by_url  # Google Sheets integration
+from cashsim.io.gsheets import read_wishlist_by_url
 from cashsim.models import Dials
 from cashsim.planning.planner import (
     constant_target_from_schedule,
@@ -3026,16 +3011,12 @@ from cashsim.ui.formatters import stringify_events_columns
 from cashsim.ui.state import dials_from_state, init_session_once
 from cashsim.utils.date_utils import next_due_date_cached as next_due_date
 
-# Pandas CoW: future-proof semantics and fewer hidden copies
 pd.options.mode.copy_on_write = True
 
 st.set_page_config(page_title="CashSim — Single Page", layout="wide")
 init_session_once()
 
 
-# ------------------
-# Helpers & caching
-# ------------------
 def _fingerprint(dials: Dials) -> str:
     """
     Stable, JSON-serializable fingerprint for Streamlit caching.
@@ -3060,13 +3041,9 @@ def run_break_even(dials_json: str, days: int = 31) -> pd.DataFrame:
 
 @st.cache_data(show_spinner=False)
 def _load_config_cached(path: str, mtime: float) -> Dials:
-    # mtime participates in the cache key so reads are invalidated when the file changes
     return load_config(path)
 
 
-# ------------
-# Renderers
-# ------------
 def render_inputs_tab() -> None:
     st.header("Inputs")
     st.subheader("Config I/O")
@@ -3078,7 +3055,7 @@ def render_inputs_tab() -> None:
         try:
             mtime = os.path.getmtime(cfg_path) if os.path.exists(cfg_path) else 0.0
             d = _load_config_cached(cfg_path, mtime)
-            # Hydrate session state from config
+
             st.session_state.update(
                 {
                     "current_cash": float(d.current_cash),
@@ -3093,7 +3070,6 @@ def render_inputs_tab() -> None:
                     "interest_mode": d.interest_mode,
                     "extra_strategy": d.extra_strategy,
                     "invest": d.invest.model_dump(),
-                    # Ensure datetime64[ns] dtype for blackouts editor
                     "blackouts_df": pd.DataFrame(
                         {"date": pd.to_datetime(getattr(d, "blackouts", []), errors="coerce")}
                     ),
@@ -3131,10 +3107,9 @@ def render_inputs_tab() -> None:
         except Exception as e:
             st.error(str(e))
 
-    # Prepare a Dials for download/save that includes blackouts
     def _dials_with_blackouts() -> Dials:
         base_dials = dials_from_state()
-        # Pull editor dates and coerce to date objects
+
         bdf = st.session_state.get("blackouts_df", pd.DataFrame({"date": []})).copy()
         if "date" not in bdf.columns:
             bdf["date"] = pd.Series([], dtype="datetime64[ns]")
@@ -3217,7 +3192,6 @@ def render_debt_tab() -> None:
     fingerprint = _fingerprint(dials)
     sim_df, _sim_metrics = run_sim(fingerprint, date.today(), 60)
 
-    # Build a flattened view of card events
     ev = sim_df.explode("cc_events", ignore_index=True)
     if bool("cc_events" in ev.columns and ev["cc_events"].notna().any()):
         base_df = ev.loc[ev["cc_events"].notna(), ["date", "cc_events"]].reset_index(drop=True)
@@ -3404,7 +3378,6 @@ def render_planner_tab() -> None:
         )
         cap = None if daily_cap_val <= 0 else float(daily_cap_val)
 
-        # --- Blackouts editor (robust dtype handling) ---
         st.markdown("**No-drive dates** (add rows as needed)")
         st.session_state.setdefault(
             "blackouts_df", pd.DataFrame({"date": pd.Series([], dtype="datetime64[ns]")})
@@ -3446,7 +3419,7 @@ def render_planner_tab() -> None:
             st.warning("Plan hits the daily cap on at least one day ...")
 
         if not df.empty:
-            df["date"] = pd.to_datetime(df["date"])  # ensure datetime index for charts
+            df["date"] = pd.to_datetime(df["date"])
 
             st.line_chart(
                 df.set_index("date")[["earn_required", "earn_capped"]],
@@ -3478,7 +3451,6 @@ def render_planner_tab() -> None:
                 },
             )
 
-            # constant target for working days
             const_target = constant_target_from_schedule(res_var.rows, planner_blackouts)
             st.metric(
                 "Constant target on working days",
@@ -3510,10 +3482,8 @@ def render_wishlist_tab() -> None:
             st.subheader("Wishlist data")
             st.dataframe(wish, use_container_width=True, hide_index=True)
 
-            # Build a day-by-day plan first (respecting blackouts)
             dials = dials_from_state()
 
-            # Coerce blackouts dtype then extract
             bdf = st.session_state.get("blackouts_df", pd.DataFrame({"date": []})).copy()
             if "date" not in bdf.columns:
                 bdf["date"] = pd.Series([], dtype="datetime64[ns]")
@@ -3535,12 +3505,11 @@ def render_wishlist_tab() -> None:
             )
             plan_df = pd.DataFrame([r.__dict__ for r in plan_for_wishlist.rows])
             plan_df["date"] = pd.to_datetime(plan_df["date"])
-            safe_floor = 0.0  # change to float(dials.safety_cushion) for cushion as the hard floor
+            safe_floor = 0.0
             plan_df["safe_surplus"] = (
                 plan_df["end_balance"] - (safe_floor + plan_df["reserve_7d_total"])
             ).round(2)
 
-            # Greedy fund by Priority (higher first)
             items = wish.sort_values(["Priority", "Item"], ascending=[False, True]).to_dict(
                 "records"
             )
@@ -3588,9 +3557,6 @@ def render_wishlist_tab() -> None:
             st.error(str(e))
 
 
-# ------------------
-# Title & Tabs
-# ------------------
 st.title("CashSim (single-page)")
 st.caption(
     "Edit inputs, bills, debt, and one-offs — then simulate and analyze break-even, "

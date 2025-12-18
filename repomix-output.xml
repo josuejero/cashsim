@@ -131,41 +131,6 @@ requirements.txt
 <files>
 This section contains the contents of the repository's files.
 
-<file path=".devcontainer/devcontainer.json">
-{
-  "name": "Python 3",
-  "image": "mcr.microsoft.com/devcontainers/python:1-3.11-bookworm",
-  "customizations": {
-    "codespaces": {
-      "openFiles": [
-        "README.md",
-        "src/cashsim/ui/streamlit_app.py"
-      ]
-    },
-    "vscode": {
-      "settings": {},
-      "extensions": [
-        "ms-python.python",
-        "ms-python.vscode-pylance"
-      ]
-    }
-  },
-  "updateContentCommand": "[ -f packages.txt ] && sudo apt update && sudo apt upgrade -y && sudo xargs apt install -y <packages.txt; [ -f requirements.txt ] && pip3 install --user -r requirements.txt; pip3 install --user streamlit; echo '✅ Packages installed and Requirements met'",
-  "postAttachCommand": {
-    "server": "streamlit run src/cashsim/ui/streamlit_app.py --server.enableCORS false --server.enableXsrfProtection false"
-  },
-  "portsAttributes": {
-    "8501": {
-      "label": "Application",
-      "onAutoForward": "openPreview"
-    }
-  },
-  "forwardPorts": [
-    8501
-  ]
-}
-</file>
-
 <file path=".hypothesis/constants/05003b5d7106c082">
 # file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/models.py
 # hypothesis_version: 6.140.3
@@ -578,50 +543,6 @@ def save_config(dials: Dials, path: str | Path) -> None:
     p.write_text(dials.model_dump_json(indent=2), encoding="utf-8")
 </file>
 
-<file path="src/cashsim/sim/gas.py">
-from __future__ import annotations
-
-
-def apply_gas_skim_and_fillups(
-    balance: float,
-    gas_bucket: float,
-    daily_earn: float,
-    gas_pct: float,
-    fill_size: float,
-) -> tuple[float, float, int]:
-    """
-    Skim daily gas, accumulate bucket, execute fill-ups (withdraw from balance).
-    O(1) arithmetic version (no loop). Returns (new_balance, new_gas_bucket, fillups_count).
-    """
-    gas_skim = daily_earn * gas_pct
-    new_bucket = gas_bucket + gas_skim
-
-    fills_before = int(gas_bucket // fill_size)
-    fills_after = int(new_bucket // fill_size)
-    fills = max(0, fills_after - fills_before)
-
-    balance -= fills * fill_size
-    gas_bucket = new_bucket - fills * fill_size
-    balance += daily_earn - gas_skim
-    return round(balance, 2), round(gas_bucket, 2), fills
-
-
-def predict_fill_cost_7d(
-    gas_bucket: float, daily_earn: float, gas_pct: float, fill_size: float
-) -> float:
-    """
-    Conservative predictor for gas spend within 7 days:
-    count how many fillups will be triggered by 7 days worth of skims.
-    """
-    if fill_size <= 0:
-        return 0.0
-    added = 7.0 * daily_earn * gas_pct
-    start_fills = int(gas_bucket // fill_size)
-    end_fills = int((gas_bucket + added) // fill_size)
-    new_fills = max(0, end_fills - start_fills)
-    return round(new_fills * fill_size, 2)
-</file>
-
 <file path="src/cashsim/sim/roll.py">
 from __future__ import annotations
 
@@ -699,61 +620,6 @@ def last_statement_close_date(today: date, due_day: int, statement_day: int | No
         sd = statement_day or prior_statement_day(due_day)
         return date(from_prev.year, from_prev.month, clamp_day(from_prev.year, from_prev.month, sd))
     return ns
-</file>
-
-<file path="src/cashsim/_typing_shims.py">
-from __future__ import annotations
-
-from collections.abc import Callable
-from typing import Any, TypeVar, cast
-
-import streamlit as st
-
-F = TypeVar("F", bound=Callable[..., Any])
-
-
-Decorator = Callable[[F], F]
-Factory = Callable[..., Decorator]
-
-
-cache_data = cast(Factory, st.cache_data)
-cache_resource = cast(Factory, st.cache_resource)
-</file>
-
-<file path="src/cashsim/constants.py">
-from __future__ import annotations
-
-DAYS_PER_YEAR = 365
-CARD_ACT_MIN_DAYS = 21
-</file>
-
-<file path="tests/test_property_adb.py">
-from decimal import Decimal
-
-from hypothesis import given
-from hypothesis import strategies as st
-
-from cashsim.utils.money import D, quantize_cents
-
-
-def _adb_interest(daily_balances: list[Decimal], apr: Decimal) -> Decimal:
-    """interest = average_daily_balance × daily_rate × days_in_cycle"""
-    days = Decimal(len(daily_balances))
-    daily_rate = D(apr) / D(365)
-    adb = sum((D(b) for b in daily_balances), D("0")) / days
-    return quantize_cents(adb * daily_rate * days)
-
-
-@given(
-    daily=st.lists(st.decimals(min_value=0, max_value=10000, places=2), min_size=1, max_size=31),
-    apr=st.decimals(min_value=0, max_value=Decimal("0.5"), places=4),
-)
-def test_adb_identity_property(daily: list[Decimal], apr: Decimal) -> None:
-    daily = [Decimal(str(x)) for x in daily]
-    daily_rate = D(apr) / D(365)
-    lhs = quantize_cents(sum((D(b) * daily_rate for b in daily), D("0")))
-    rhs = _adb_interest(daily, apr)
-    assert lhs == rhs
 </file>
 
 <file path=".monkey-mods.txt">
@@ -861,6 +727,41 @@ cashsim.utils.money
   "tokenCount": {
     "encoding": "o200k_base"
   }
+}
+</file>
+
+<file path=".devcontainer/devcontainer.json">
+{
+  "name": "Python 3",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.11-bookworm",
+  "customizations": {
+    "codespaces": {
+      "openFiles": [
+        "README.md",
+        "src/cashsim/ui/streamlit_app.py"
+      ]
+    },
+    "vscode": {
+      "settings": {},
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ]
+    }
+  },
+  "updateContentCommand": "[ -f packages.txt ] && sudo apt update && sudo apt upgrade -y && sudo xargs apt install -y <packages.txt; [ -f requirements.txt ] && pip3 install --user -r requirements.txt; pip3 install --user streamlit; echo '✅ Packages installed and Requirements met'",
+  "postAttachCommand": {
+    "server": "streamlit run src/cashsim/ui/streamlit_app.py --server.enableCORS false --server.enableXsrfProtection false"
+  },
+  "portsAttributes": {
+    "8501": {
+      "label": "Application",
+      "onAutoForward": "openPreview"
+    }
+  },
+  "forwardPorts": [
+    8501
+  ]
 }
 </file>
 
@@ -978,6 +879,50 @@ def add_extra_event(
     )
 </file>
 
+<file path="src/cashsim/sim/gas.py">
+from __future__ import annotations
+
+
+def apply_gas_skim_and_fillups(
+    balance: float,
+    gas_bucket: float,
+    daily_earn: float,
+    gas_pct: float,
+    fill_size: float,
+) -> tuple[float, float, int]:
+    """
+    Skim daily gas, accumulate bucket, execute fill-ups (withdraw from balance).
+    O(1) arithmetic version (no loop). Returns (new_balance, new_gas_bucket, fillups_count).
+    """
+    gas_skim = daily_earn * gas_pct
+    new_bucket = gas_bucket + gas_skim
+
+    fills_before = int(gas_bucket // fill_size)
+    fills_after = int(new_bucket // fill_size)
+    fills = max(0, fills_after - fills_before)
+
+    balance -= fills * fill_size
+    gas_bucket = new_bucket - fills * fill_size
+    balance += daily_earn - gas_skim
+    return round(balance, 2), round(gas_bucket, 2), fills
+
+
+def predict_fill_cost_7d(
+    gas_bucket: float, daily_earn: float, gas_pct: float, fill_size: float
+) -> float:
+    """
+    Conservative predictor for gas spend within 7 days:
+    count how many fillups will be triggered by 7 days worth of skims.
+    """
+    if fill_size <= 0:
+        return 0.0
+    added = 7.0 * daily_earn * gas_pct
+    start_fills = int(gas_bucket // fill_size)
+    end_fills = int((gas_bucket + added) // fill_size)
+    new_fills = max(0, end_fills - start_fills)
+    return round(new_fills * fill_size, 2)
+</file>
+
 <file path="src/cashsim/sim/reserve.py">
 from __future__ import annotations
 
@@ -1076,6 +1021,340 @@ if __name__ == "__main__":
     main()
 </file>
 
+<file path="src/cashsim/_typing_shims.py">
+from __future__ import annotations
+
+from collections.abc import Callable
+from typing import Any, TypeVar, cast
+
+import streamlit as st
+
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+Decorator = Callable[[F], F]
+Factory = Callable[..., Decorator]
+
+
+cache_data = cast(Factory, st.cache_data)
+cache_resource = cast(Factory, st.cache_resource)
+</file>
+
+<file path="src/cashsim/constants.py">
+from __future__ import annotations
+
+DAYS_PER_YEAR = 365
+CARD_ACT_MIN_DAYS = 21
+</file>
+
+<file path="tests/test_property_adb.py">
+from decimal import Decimal
+
+from hypothesis import given
+from hypothesis import strategies as st
+
+from cashsim.utils.money import D, quantize_cents
+
+
+def _adb_interest(daily_balances: list[Decimal], apr: Decimal) -> Decimal:
+    """interest = average_daily_balance × daily_rate × days_in_cycle"""
+    days = Decimal(len(daily_balances))
+    daily_rate = D(apr) / D(365)
+    adb = sum((D(b) for b in daily_balances), D("0")) / days
+    return quantize_cents(adb * daily_rate * days)
+
+
+@given(
+    daily=st.lists(st.decimals(min_value=0, max_value=10000, places=2), min_size=1, max_size=31),
+    apr=st.decimals(min_value=0, max_value=Decimal("0.5"), places=4),
+)
+def test_adb_identity_property(daily: list[Decimal], apr: Decimal) -> None:
+    daily = [Decimal(str(x)) for x in daily]
+    daily_rate = D(apr) / D(365)
+    lhs = quantize_cents(sum((D(b) * daily_rate for b in daily), D("0")))
+    rhs = _adb_interest(daily, apr)
+    assert lhs == rhs
+</file>
+
+<file path=".repomixignore">
+# Add patterns to ignore here, one per line
+# Example:
+# *.log
+# tmp/
+.streamlit/secrets.toml
+monkeytype.sqlite3
+</file>
+
+<file path="requirements.txt">
+-e .
+
+# requirements.txt (third-party deps)
+pydantic>=2.10,<3
+pandas>=2.2.3,<3.0
+python-dateutil>=2.9.0.post0
+streamlit>=1.49,<2.0
+pyarrow>=21,<22
+gspread>=6,<7
+google-auth>=2.0
+gspread-dataframe>=2.0.0
+</file>
+
+<file path="src/cashsim/ui/components.py">
+from __future__ import annotations
+
+import pandas as pd
+import streamlit as st
+
+
+def number_dials() -> None:
+    col1, col2 = st.columns(2)
+    col1.number_input("current cash", min_value=0.0, step=50.0, key="current_cash")
+    col2.number_input("safety cushion", min_value=0.0, step=25.0, key="safety_cushion")
+    col3, col4 = st.columns(2)
+    col3.number_input("daily earnings", min_value=0.0, step=10.0, key="weekday_earnings")
+    col4.number_input(
+        "gas % of earnings (0-1)", min_value=0.0, max_value=1.0, step=0.05, key="gas_pct"
+    )
+    st.number_input("gas fill-up size", min_value=1.0, step=1.0, key="gas_fill_size")
+
+
+def strategy_toggles() -> None:
+    st.selectbox(
+        "Interest calculation",
+        ["statement_adb", "due_simple"],
+        key="interest_mode",
+        help="ADB posts at statement close; 'due_simple' posts on due date.",
+    )
+    st.selectbox(
+        "Extra payment strategy",
+        ["avalanche", "snowball"],
+        key="extra_strategy",
+        help="Avalanche = highest APR first; Snowball = smallest balance first.",
+    )
+
+
+def bills_editor(df: pd.DataFrame, key: str | int | None = "bill_editor") -> pd.DataFrame:
+    return st.data_editor(
+        df,
+        num_rows="dynamic",
+        width="stretch",
+        column_config={
+            "name": st.column_config.TextColumn("name"),
+            "usual_day": st.column_config.NumberColumn(
+                "usual day (1-31)", min_value=1, max_value=31
+            ),
+            "amount": st.column_config.NumberColumn("amount", min_value=0.0, step=1.0),
+        },
+        key=key,
+    )
+
+
+def cc_editor(df: pd.DataFrame, key: str | int | None = "cc_editor") -> pd.DataFrame:
+    return st.data_editor(
+        df,
+        num_rows="dynamic",
+        width="stretch",
+        column_config={
+            "name": st.column_config.TextColumn("name"),
+            "apr": st.column_config.NumberColumn(
+                "APR (decimal)", min_value=0.0, max_value=1.0, step=0.0001
+            ),
+            "balance": st.column_config.NumberColumn("balance", min_value=0.0, step=1.0),
+            "due_day": st.column_config.NumberColumn("due day (1-31)", min_value=1, max_value=31),
+            "min_pct": st.column_config.NumberColumn(
+                "min % (0-1)", min_value=0.0, max_value=1.0, step=0.001
+            ),
+            "min_floor": st.column_config.NumberColumn("min floor", min_value=0.0, step=1.0),
+            "statement_day": st.column_config.NumberColumn(
+                "statement day (opt)", min_value=1, max_value=31
+            ),
+        },
+        key=key,
+    )
+
+
+def iou_editor(df: pd.DataFrame, key: str | int | None = "iou_editor") -> pd.DataFrame:
+    return st.data_editor(
+        df,
+        num_rows="dynamic",
+        width="stretch",
+        column_config={
+            "name": st.column_config.TextColumn("name"),
+            "balance": st.column_config.NumberColumn("balance", min_value=0.0, step=1.0),
+            "apr": st.column_config.NumberColumn(
+                "APR (decimal)", min_value=0.0, max_value=1.0, step=0.0001
+            ),
+            "due_day": st.column_config.NumberColumn("due day (opt)", min_value=1, max_value=31),
+            "min_pct": st.column_config.NumberColumn(
+                "min % (0-1)", min_value=0.0, max_value=1.0, step=0.001
+            ),
+            "min_floor": st.column_config.NumberColumn("min floor", min_value=0.0, step=1.0),
+        },
+        key=key,
+    )
+
+
+def oneoff_editor(df: pd.DataFrame, key: str | int | None = "oneoff_editor") -> pd.DataFrame:
+    return st.data_editor(
+        df,
+        num_rows="dynamic",
+        width="stretch",
+        column_config={
+            "name": st.column_config.TextColumn("name"),
+            "due_date": st.column_config.DateColumn("due date", format="iso8601"),
+            "amount": st.column_config.NumberColumn("amount", min_value=0.0, step=1.0),
+            "priority": st.column_config.NumberColumn(
+                "priority (higher=faster)", min_value=0, max_value=99, step=1
+            ),
+            "must_pay": st.column_config.CheckboxColumn("must pay?"),
+        },
+        key=key,
+    )
+</file>
+
+<file path="src/cashsim/ui/state.py">
+from __future__ import annotations
+
+from datetime import date
+from typing import Any
+
+import pandas as pd
+import streamlit as st
+
+from cashsim.models import IOU, Bill, CreditCard, Dials, InvestmentSettings, OneOff
+
+DEFAULT_BILLS_DF = pd.DataFrame(
+    [
+        {"name": "Rent", "usual_day": 1, "amount": 1200.0},
+        {"name": "Car insurance", "usual_day": 15, "amount": 120.0},
+        {"name": "Phone", "usual_day": 20, "amount": 60.0},
+    ]
+)
+DEFAULT_CC_DF = pd.DataFrame(
+    [
+        {
+            "name": "Chase VISA",
+            "apr": 0.2499,
+            "balance": 1200.0,
+            "due_day": 24,
+            "min_pct": 0.02,
+            "min_floor": 25.0,
+            "statement_day": None,
+        }
+    ]
+)
+DEFAULT_IOU_DF = pd.DataFrame(
+    [
+        {
+            "name": "Friend",
+            "balance": 0.0,
+            "apr": 0.0,
+            "due_day": None,
+            "min_pct": 0.0,
+            "min_floor": 0.0,
+        }
+    ]
+)
+DEFAULT_ONEOFF_DF = pd.DataFrame(
+    [
+        {
+            "name": "Inspection",
+            "due_date": date.today(),
+            "amount": 35.0,
+            "priority": 1,
+            "must_pay": True,
+        }
+    ]
+)
+
+
+def init_session_once() -> None:
+    st.session_state.setdefault("current_cash", 1200.0)
+    st.session_state.setdefault("safety_cushion", 300.0)
+    st.session_state.setdefault("weekday_earnings", 150.0)
+    st.session_state.setdefault("gas_pct", 0.2)
+    st.session_state.setdefault("gas_fill_size", 45.0)
+    st.session_state.setdefault("bill_table", DEFAULT_BILLS_DF.copy())
+    st.session_state.setdefault("cc_table", DEFAULT_CC_DF.copy())
+    st.session_state.setdefault("iou_table", DEFAULT_IOU_DF.copy())
+    st.session_state.setdefault("oneoff_table", DEFAULT_ONEOFF_DF.copy())
+    st.session_state.setdefault("invest", InvestmentSettings().model_dump())
+    st.session_state.setdefault("interest_mode", "statement_adb")
+    st.session_state.setdefault("extra_strategy", "avalanche")
+    st.session_state.setdefault(
+        "blackouts_df", pd.DataFrame({"date": pd.Series([], dtype="datetime64[ns]")})
+    )
+
+
+def _coerce_date(v: object) -> date:
+    if isinstance(v, date):
+        return v
+    if v is None or (isinstance(v, float) and pd.isna(v)):
+        raise ValueError("one-off due_date is required")
+    if isinstance(v, (str, float, int)):
+        return pd.to_datetime(str(v)).date()
+    raise ValueError(f"Cannot convert {type(v)} to date")
+
+
+def _none_if_nan(v: object) -> int | None:
+    if v is None:
+        return None
+    try:
+        if isinstance(v, (float, int)) and pd.isna(v):
+            return None
+    except Exception:
+        pass
+    try:
+        if isinstance(v, (int, float, str)):
+            return int(float(v))
+        return None
+    except Exception:
+        return None
+
+
+def dials_from_state() -> Dials:
+    bills = [Bill(**row) for row in st.session_state["bill_table"].to_dict(orient="records")]
+
+    clean_cc_rows: list[dict[str, Any]] = []
+    for row in st.session_state["cc_table"].to_dict(orient="records"):
+        row_dict = dict(row)
+        row_dict["statement_day"] = _none_if_nan(row_dict.get("statement_day"))
+        clean_cc_rows.append(row_dict)
+    cards = [CreditCard(**row) for row in clean_cc_rows]
+
+    clean_iou_rows = []
+    for row in st.session_state["iou_table"].to_dict(orient="records"):
+        row = dict(row)
+        row["due_day"] = _none_if_nan(row.get("due_day"))
+        clean_iou_rows.append(row)
+    ious = [IOU(**row) for row in clean_iou_rows]
+
+    oneoffs = [
+        OneOff(**{**row, "due_date": _coerce_date(row["due_date"])})
+        for row in st.session_state["oneoff_table"].to_dict(orient="records")
+    ]
+
+    blackouts: list[date] = []
+    for v in st.session_state.get("blackouts_df", pd.DataFrame({"date": []}))["date"]:
+        if pd.notna(v):
+            blackouts.append(pd.to_datetime(v).date())
+
+    return Dials(
+        current_cash=st.session_state["current_cash"],
+        safety_cushion=st.session_state["safety_cushion"],
+        weekday_earnings=st.session_state["weekday_earnings"],
+        gas_pct=st.session_state["gas_pct"],
+        gas_fill_size=st.session_state["gas_fill_size"],
+        bills=bills,
+        credit_cards=cards,
+        ious=ious,
+        oneoffs=oneoffs,
+        invest=InvestmentSettings(**st.session_state["invest"]),
+        interest_mode=st.session_state["interest_mode"],
+        extra_strategy=st.session_state["extra_strategy"],
+    )
+</file>
+
 <file path="src/cashsim/models.py">
 from __future__ import annotations
 
@@ -1163,27 +1442,123 @@ class Dials(BaseModel):
     blackouts: list[date] = []
 </file>
 
-<file path=".repomixignore">
-# Add patterns to ignore here, one per line
-# Example:
-# *.log
-# tmp/
-.streamlit/secrets.toml
-monkeytype.sqlite3
+<file path=".pre-commit-config.yaml">
+default_language_version:
+  python: python3.12
+repos:
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.14.0
+  hooks:
+  - id: ruff-check
+    args:
+    - --fix
+    - --unsafe-fixes
+    - --ignore
+    - E501
+  - id: ruff-format
+- repo: https://github.com/pre-commit/mirrors-mypy
+  rev: v1.18.2
+  hooks:
+  - id: mypy
+    additional_dependencies:
+    - pandas-stubs
+    - types-python-dateutil
+    - typing-extensions>=4.0
+- repo: https://github.com/ComPWA/pyright-pre-commit
+  rev: v1.1.406
+  hooks:
+  - id: pyright
+- repo: https://github.com/PyCQA/bandit
+  rev: 1.8.6
+  hooks:
+  - id: bandit
+    args:
+    - -q
+    - -r
+    - src
+    - --exclude
+    - .venv,venv,tests
+    pass_filenames: false
 </file>
 
-<file path="requirements.txt">
--e .
+<file path="README.md">
+# CashSim
 
-# requirements.txt (third-party deps)
-pydantic>=2.10,<3
-pandas>=2.2.3,<3.0
-python-dateutil>=2.9.0.post0
-streamlit>=1.49,<2.0
-pyarrow>=21,<22
-gspread>=6,<7
-google-auth>=2.0
-gspread-dataframe>=2.0.0
+> Streamlit-powered cash-flow & debt planning simulator with daily scheduling, ADB interest, and “what-if” analytics.
+
+[![CI](https://github.com/josuejero/cashsim/actions/workflows/ci.yml/badge.svg)](https://github.com/josuejero/cashsim/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.12+-informational.svg)](#)
+[![Live App](https://img.shields.io/badge/app-live-brightgreen.svg)](https://cashsim.streamlit.app)
+
+
+
+## ✨ Features
+- **Single-page Streamlit UI**: inputs, simulation, analytics, planner, wishlist (Google Sheets).
+- **ADB interest math** (Decimal-correct) & due-date postings.
+- **Daily planner**: variable schedule with blackout days and 7-day reserve logic.
+- **Break-even grid & monthly snapshot** analytics.
+- **Google Sheets** wishlist integration via service account.
+
+## 🚀 Quickstart (local)
+````bash
+# 1) Python 3.12+ recommended
+python -m venv .venv && source .venv/bin/activate
+
+# 2) Install the package (editable ok)
+pip install -e ".[dev]"     # or: pip install -r requirements.txt
+
+# 3) (Optional) Google Sheets secrets for wishlist tab
+#    Put TOML at: .streamlit/secrets.toml (see docs/SECRETS.md)
+
+# 4) Launch the app
+cashsim               # invokes Streamlit runner under the hood
+# or: streamlit run src/cashsim/ui/streamlit_app.py
+`````
+
+## 🔧 Configuration
+
+* Example config: [`examples/configs/sample.json`](examples/configs/sample.json)
+* Local secrets: see [`docs/SECRETS.md`](docs/SECRETS.md)
+  **Never commit secrets.** Use Streamlit Cloud’s Secrets for production.
+
+## 🧪 Tests
+
+```bash
+pytest -q
+```
+
+## 📦 Deploy
+
+### Streamlit Community Cloud (recommended)
+
+* Connect repo → set **App file**: `src/cashsim/ui/streamlit_app.py`.
+* Add **Secrets** (paste TOML from `docs/SECRETS.md` template).
+* Optional: set custom subdomain (e.g., `cashsim.streamlit.app`).
+
+### Hugging Face Spaces (Docker)
+
+* Create Space (Docker) → add the `Dockerfile` from this repo.
+* Add secrets in Space settings; write them to `.streamlit/secrets.toml` at container start.
+
+### Google Cloud Run
+
+* Build & push container image → **Deploy** to Cloud Run.
+* Mount a Secret Manager secret to `/.streamlit/secrets.toml`.
+
+## 🗺️ Roadmap
+
+* CSV import/export
+* Scenario comparison view
+* CLI subcommands for headless batch simulation
+
+## 🤝 Contributing
+
+Bug reports & PRs welcome. See **CONTRIBUTING.md**.
+
+## 📝 License
+
+MIT — see **LICENSE**.
 </file>
 
 <file path="src/cashsim/analytics/snapshot.py">
@@ -1639,119 +2014,6 @@ def post_simple_interest_if_due(
     return out
 </file>
 
-<file path="src/cashsim/ui/components.py">
-from __future__ import annotations
-
-import pandas as pd
-import streamlit as st
-
-
-def number_dials() -> None:
-    col1, col2 = st.columns(2)
-    col1.number_input("current cash", min_value=0.0, step=50.0, key="current_cash")
-    col2.number_input("safety cushion", min_value=0.0, step=25.0, key="safety_cushion")
-    col3, col4 = st.columns(2)
-    col3.number_input("daily earnings", min_value=0.0, step=10.0, key="weekday_earnings")
-    col4.number_input(
-        "gas % of earnings (0-1)", min_value=0.0, max_value=1.0, step=0.05, key="gas_pct"
-    )
-    st.number_input("gas fill-up size", min_value=1.0, step=1.0, key="gas_fill_size")
-
-
-def strategy_toggles() -> None:
-    st.selectbox(
-        "Interest calculation",
-        ["statement_adb", "due_simple"],
-        key="interest_mode",
-        help="ADB posts at statement close; 'due_simple' posts on due date.",
-    )
-    st.selectbox(
-        "Extra payment strategy",
-        ["avalanche", "snowball"],
-        key="extra_strategy",
-        help="Avalanche = highest APR first; Snowball = smallest balance first.",
-    )
-
-
-def bills_editor(df: pd.DataFrame, key: str | int | None = "bill_editor") -> pd.DataFrame:
-    return st.data_editor(
-        df,
-        num_rows="dynamic",
-        width="stretch",
-        column_config={
-            "name": st.column_config.TextColumn("name"),
-            "usual_day": st.column_config.NumberColumn(
-                "usual day (1-31)", min_value=1, max_value=31
-            ),
-            "amount": st.column_config.NumberColumn("amount", min_value=0.0, step=1.0),
-        },
-        key=key,
-    )
-
-
-def cc_editor(df: pd.DataFrame, key: str | int | None = "cc_editor") -> pd.DataFrame:
-    return st.data_editor(
-        df,
-        num_rows="dynamic",
-        width="stretch",
-        column_config={
-            "name": st.column_config.TextColumn("name"),
-            "apr": st.column_config.NumberColumn(
-                "APR (decimal)", min_value=0.0, max_value=1.0, step=0.0001
-            ),
-            "balance": st.column_config.NumberColumn("balance", min_value=0.0, step=1.0),
-            "due_day": st.column_config.NumberColumn("due day (1-31)", min_value=1, max_value=31),
-            "min_pct": st.column_config.NumberColumn(
-                "min % (0-1)", min_value=0.0, max_value=1.0, step=0.001
-            ),
-            "min_floor": st.column_config.NumberColumn("min floor", min_value=0.0, step=1.0),
-            "statement_day": st.column_config.NumberColumn(
-                "statement day (opt)", min_value=1, max_value=31
-            ),
-        },
-        key=key,
-    )
-
-
-def iou_editor(df: pd.DataFrame, key: str | int | None = "iou_editor") -> pd.DataFrame:
-    return st.data_editor(
-        df,
-        num_rows="dynamic",
-        width="stretch",
-        column_config={
-            "name": st.column_config.TextColumn("name"),
-            "balance": st.column_config.NumberColumn("balance", min_value=0.0, step=1.0),
-            "apr": st.column_config.NumberColumn(
-                "APR (decimal)", min_value=0.0, max_value=1.0, step=0.0001
-            ),
-            "due_day": st.column_config.NumberColumn("due day (opt)", min_value=1, max_value=31),
-            "min_pct": st.column_config.NumberColumn(
-                "min % (0-1)", min_value=0.0, max_value=1.0, step=0.001
-            ),
-            "min_floor": st.column_config.NumberColumn("min floor", min_value=0.0, step=1.0),
-        },
-        key=key,
-    )
-
-
-def oneoff_editor(df: pd.DataFrame, key: str | int | None = "oneoff_editor") -> pd.DataFrame:
-    return st.data_editor(
-        df,
-        num_rows="dynamic",
-        width="stretch",
-        column_config={
-            "name": st.column_config.TextColumn("name"),
-            "due_date": st.column_config.DateColumn("due date", format="iso8601"),
-            "amount": st.column_config.NumberColumn("amount", min_value=0.0, step=1.0),
-            "priority": st.column_config.NumberColumn(
-                "priority (higher=faster)", min_value=0, max_value=99, step=1
-            ),
-            "must_pay": st.column_config.CheckboxColumn("must pay?"),
-        },
-        key=key,
-    )
-</file>
-
 <file path="src/cashsim/ui/formatters.py">
 from __future__ import annotations
 
@@ -1783,149 +2045,6 @@ def stringify_events_columns(df: pd.DataFrame) -> pd.DataFrame:
         if col in out.columns:
             out[col] = out[col].apply(_fmt_pair_list)
     return out
-</file>
-
-<file path="src/cashsim/ui/state.py">
-from __future__ import annotations
-
-from datetime import date
-from typing import Any
-
-import pandas as pd
-import streamlit as st
-
-from cashsim.models import IOU, Bill, CreditCard, Dials, InvestmentSettings, OneOff
-
-DEFAULT_BILLS_DF = pd.DataFrame(
-    [
-        {"name": "Rent", "usual_day": 1, "amount": 1200.0},
-        {"name": "Car insurance", "usual_day": 15, "amount": 120.0},
-        {"name": "Phone", "usual_day": 20, "amount": 60.0},
-    ]
-)
-DEFAULT_CC_DF = pd.DataFrame(
-    [
-        {
-            "name": "Chase VISA",
-            "apr": 0.2499,
-            "balance": 1200.0,
-            "due_day": 24,
-            "min_pct": 0.02,
-            "min_floor": 25.0,
-            "statement_day": None,
-        }
-    ]
-)
-DEFAULT_IOU_DF = pd.DataFrame(
-    [
-        {
-            "name": "Friend",
-            "balance": 0.0,
-            "apr": 0.0,
-            "due_day": None,
-            "min_pct": 0.0,
-            "min_floor": 0.0,
-        }
-    ]
-)
-DEFAULT_ONEOFF_DF = pd.DataFrame(
-    [
-        {
-            "name": "Inspection",
-            "due_date": date.today(),
-            "amount": 35.0,
-            "priority": 1,
-            "must_pay": True,
-        }
-    ]
-)
-
-
-def init_session_once() -> None:
-    st.session_state.setdefault("current_cash", 1200.0)
-    st.session_state.setdefault("safety_cushion", 300.0)
-    st.session_state.setdefault("weekday_earnings", 150.0)
-    st.session_state.setdefault("gas_pct", 0.2)
-    st.session_state.setdefault("gas_fill_size", 45.0)
-    st.session_state.setdefault("bill_table", DEFAULT_BILLS_DF.copy())
-    st.session_state.setdefault("cc_table", DEFAULT_CC_DF.copy())
-    st.session_state.setdefault("iou_table", DEFAULT_IOU_DF.copy())
-    st.session_state.setdefault("oneoff_table", DEFAULT_ONEOFF_DF.copy())
-    st.session_state.setdefault("invest", InvestmentSettings().model_dump())
-    st.session_state.setdefault("interest_mode", "statement_adb")
-    st.session_state.setdefault("extra_strategy", "avalanche")
-    st.session_state.setdefault(
-        "blackouts_df", pd.DataFrame({"date": pd.Series([], dtype="datetime64[ns]")})
-    )
-
-
-def _coerce_date(v: object) -> date:
-    if isinstance(v, date):
-        return v
-    if v is None or (isinstance(v, float) and pd.isna(v)):
-        raise ValueError("one-off due_date is required")
-    if isinstance(v, (str, float, int)):
-        return pd.to_datetime(str(v)).date()
-    raise ValueError(f"Cannot convert {type(v)} to date")
-
-
-def _none_if_nan(v: object) -> int | None:
-    if v is None:
-        return None
-    try:
-        if isinstance(v, (float, int)) and pd.isna(v):
-            return None
-    except Exception:
-        pass
-    try:
-        if isinstance(v, (int, float, str)):
-            return int(float(v))
-        return None
-    except Exception:
-        return None
-
-
-def dials_from_state() -> Dials:
-    bills = [Bill(**row) for row in st.session_state["bill_table"].to_dict(orient="records")]
-
-    clean_cc_rows: list[dict[str, Any]] = []
-    for row in st.session_state["cc_table"].to_dict(orient="records"):
-        row_dict = dict(row)
-        row_dict["statement_day"] = _none_if_nan(row_dict.get("statement_day"))
-        clean_cc_rows.append(row_dict)
-    cards = [CreditCard(**row) for row in clean_cc_rows]
-
-    clean_iou_rows = []
-    for row in st.session_state["iou_table"].to_dict(orient="records"):
-        row = dict(row)
-        row["due_day"] = _none_if_nan(row.get("due_day"))
-        clean_iou_rows.append(row)
-    ious = [IOU(**row) for row in clean_iou_rows]
-
-    oneoffs = [
-        OneOff(**{**row, "due_date": _coerce_date(row["due_date"])})
-        for row in st.session_state["oneoff_table"].to_dict(orient="records")
-    ]
-
-    blackouts: list[date] = []
-    for v in st.session_state.get("blackouts_df", pd.DataFrame({"date": []}))["date"]:
-        if pd.notna(v):
-            blackouts.append(pd.to_datetime(v).date())
-
-    return Dials(
-        current_cash=st.session_state["current_cash"],
-        safety_cushion=st.session_state["safety_cushion"],
-        weekday_earnings=st.session_state["weekday_earnings"],
-        gas_pct=st.session_state["gas_pct"],
-        gas_fill_size=st.session_state["gas_fill_size"],
-        bills=bills,
-        credit_cards=cards,
-        ious=ious,
-        oneoffs=oneoffs,
-        invest=InvestmentSettings(**st.session_state["invest"]),
-        interest_mode=st.session_state["interest_mode"],
-        extra_strategy=st.session_state["extra_strategy"],
-    )
 </file>
 
 <file path="src/cashsim/__init__.py">
@@ -1993,43 +2112,14 @@ def test_adb_property_equivalence() -> None:
     assert i1 == i2
 </file>
 
-<file path=".pre-commit-config.yaml">
-default_language_version:
-  python: python3.12
-repos:
-- repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.14.0
-  hooks:
-  - id: ruff-check
-    args:
-    - --fix
-    - --unsafe-fixes
-    - --ignore
-    - E501
-  - id: ruff-format
-- repo: https://github.com/pre-commit/mirrors-mypy
-  rev: v1.18.2
-  hooks:
-  - id: mypy
-    additional_dependencies:
-    - pandas-stubs
-    - types-python-dateutil
-    - typing-extensions>=4.0
-- repo: https://github.com/ComPWA/pyright-pre-commit
-  rev: v1.1.406
-  hooks:
-  - id: pyright
-- repo: https://github.com/PyCQA/bandit
-  rev: 1.8.6
-  hooks:
-  - id: bandit
-    args:
-    - -q
-    - -r
-    - src
-    - --exclude
-    - .venv,venv,tests
-    pass_filenames: false
+<file path=".gitignore">
+config.json
+bobbie_config.json
+
+.streamlit/
+
+# Streamlit secrets
+.streamlit/
 </file>
 
 <file path="mypy.ini">
@@ -2057,86 +2147,6 @@ ignore_missing_imports = True
 
 [mypy-hypothesis.*]
 ignore_missing_imports = True
-</file>
-
-<file path="README.md">
-# CashSim
-
-> Streamlit-powered cash-flow & debt planning simulator with daily scheduling, ADB interest, and “what-if” analytics.
-
-[![CI](https://github.com/josuejero/cashsim/actions/workflows/ci.yml/badge.svg)](https://github.com/josuejero/cashsim/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.12+-informational.svg)](#)
-[![Live App](https://img.shields.io/badge/app-live-brightgreen.svg)](https://cashsim.streamlit.app)
-
-
-
-## ✨ Features
-- **Single-page Streamlit UI**: inputs, simulation, analytics, planner, wishlist (Google Sheets).
-- **ADB interest math** (Decimal-correct) & due-date postings.
-- **Daily planner**: variable schedule with blackout days and 7-day reserve logic.
-- **Break-even grid & monthly snapshot** analytics.
-- **Google Sheets** wishlist integration via service account.
-
-## 🚀 Quickstart (local)
-````bash
-# 1) Python 3.12+ recommended
-python -m venv .venv && source .venv/bin/activate
-
-# 2) Install the package (editable ok)
-pip install -e ".[dev]"     # or: pip install -r requirements.txt
-
-# 3) (Optional) Google Sheets secrets for wishlist tab
-#    Put TOML at: .streamlit/secrets.toml (see docs/SECRETS.md)
-
-# 4) Launch the app
-cashsim               # invokes Streamlit runner under the hood
-# or: streamlit run src/cashsim/ui/streamlit_app.py
-`````
-
-## 🔧 Configuration
-
-* Example config: [`examples/configs/sample.json`](examples/configs/sample.json)
-* Local secrets: see [`docs/SECRETS.md`](docs/SECRETS.md)
-  **Never commit secrets.** Use Streamlit Cloud’s Secrets for production.
-
-## 🧪 Tests
-
-```bash
-pytest -q
-```
-
-## 📦 Deploy
-
-### Streamlit Community Cloud (recommended)
-
-* Connect repo → set **App file**: `src/cashsim/ui/streamlit_app.py`.
-* Add **Secrets** (paste TOML from `docs/SECRETS.md` template).
-* Optional: set custom subdomain (e.g., `cashsim.streamlit.app`).
-
-### Hugging Face Spaces (Docker)
-
-* Create Space (Docker) → add the `Dockerfile` from this repo.
-* Add secrets in Space settings; write them to `.streamlit/secrets.toml` at container start.
-
-### Google Cloud Run
-
-* Build & push container image → **Deploy** to Cloud Run.
-* Mount a Secret Manager secret to `/.streamlit/secrets.toml`.
-
-## 🗺️ Roadmap
-
-* CSV import/export
-* Scenario comparison view
-* CLI subcommands for headless batch simulation
-
-## 🤝 Contributing
-
-Bug reports & PRs welcome. See **CONTRIBUTING.md**.
-
-## 📝 License
-
-MIT — see **LICENSE**.
 </file>
 
 <file path="src/cashsim/planning/planner.py">
@@ -2607,33 +2617,74 @@ def post_daily_interest(balance: Decimal, apr: Decimal) -> Decimal:
 <file path="src/cashsim/cli.py">
 from __future__ import annotations
 
+import importlib
 import sys
-from importlib import import_module
-from typing import TYPE_CHECKING
+from pathlib import Path
 
-if TYPE_CHECKING:
-    pass
+import typer
 
-
-def st_main() -> None:
-    stcli = import_module("streamlit.web.cli")
-    sys.argv = ["streamlit", "run", "src/cashsim/ui/streamlit_app.py", "--server.headless=true"]
-    stcli.main()
+app = typer.Typer(
+    add_completion=False,
+    no_args_is_help=False,
+    help="CashSim CLI. Use `cashsim ui` to launch the Streamlit app.",
+)
 
 
-def main(argv: list[str] | None = None) -> int:
-    st_main()
-    return 0
-</file>
+def _streamlit_app_file() -> str:
+    """Return the installed module file path for the Streamlit app."""
+    mod = importlib.import_module("cashsim.ui.streamlit_app")
+    if not getattr(mod, "__file__", None):
+        raise RuntimeError("cashsim.ui.streamlit_app has no __file__; install may be broken")
+    return str(Path(mod.__file__).resolve())
 
-<file path=".gitignore">
-config.json
-bobbie_config.json
 
-.streamlit/
+def _run_streamlit(app_file: str, *, headless: bool, extra_args: list[str]) -> None:
+    """Invoke Streamlit programmatically so `cashsim ui` behaves like a real product entrypoint."""
+    from streamlit.web import cli as stcli
 
-# Streamlit secrets
-.streamlit/
+    argv = ["streamlit", "run", app_file]
+    if headless:
+        argv.append("--server.headless=true")
+
+    # Allow advanced users to pass Streamlit flags, e.g. `cashsim ui -- --server.port 8502`
+    argv.extend(extra_args)
+
+    old_argv = sys.argv
+    try:
+        sys.argv = argv
+        stcli.main()
+    finally:
+        sys.argv = old_argv
+
+
+@app.command(
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+)
+def ui(
+    ctx: typer.Context,
+    headless: bool = typer.Option(
+        False,
+        "--headless/--no-headless",
+        help="Run Streamlit without opening a browser.",
+    ),
+) -> None:
+    """Launch the Streamlit UI."""
+    app_file = _streamlit_app_file()
+    extra_args = list(ctx.args)
+    _run_streamlit(app_file, headless=headless, extra_args=extra_args)
+
+
+def main() -> None:
+    # Compatibility: `cashsim` launches the UI.
+    # Canonical: `cashsim ui`.
+    if len(sys.argv) == 1:
+        sys.argv = [sys.argv[0], "ui"]
+
+    app()
+
+
+if __name__ == "__main__":
+    main()
 </file>
 
 <file path=".github/workflows/ci.yml">
@@ -2974,9 +3025,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-_SRC = Path(__file__).resolve().parents[2]
-if str(_SRC) not in sys.path:
-    sys.path.insert(0, str(_SRC))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 
 import json

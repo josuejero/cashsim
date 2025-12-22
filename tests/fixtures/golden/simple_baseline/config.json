@@ -1,0 +1,19 @@
+{
+  "current_cash": 500.0,
+  "safety_cushion": 250.0,
+  "weekday_earnings": 120.0,
+  "gas_pct": 0.15,
+  "gas_fill_size": 25.0,
+  "bills": [
+    {"name": "Phone", "usual_day": 5, "amount": 60.0},
+    {"name": "Internet", "usual_day": 12, "amount": 55.0},
+    {"name": "Rent", "usual_day": 1, "amount": 900.0}
+  ],
+  "credit_cards": [],
+  "ious": [],
+  "oneoffs": [],
+  "invest": {"enable": false, "hysa_apy": 0.045, "expected_market_return": 0.07, "use_dca": false, "roth_target": 0.0, "trad_target": 0.0, "hysa_target": 0.0, "robinhood_target": 0.0, "ira_year_limit": 7000.0, "roth_ok_today": true},
+  "interest_mode": "statement_adb",
+  "extra_strategy": "avalanche",
+  "blackouts": []
+}

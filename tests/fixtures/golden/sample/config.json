@@ -1,0 +1,205 @@
+{
+  "current_cash": 31.0,
+  "safety_cushion": 100.0,
+  "weekday_earnings": 100.0,
+  "gas_pct": 0.185,
+  "gas_fill_size": 25.0,
+  "bills": [
+    {
+      "name": "Apple Music",
+      "usual_day": 28,
+      "amount": 10.99
+    },
+    {
+      "name": "Bank of America Maintenance",
+      "usual_day": 5,
+      "amount": 12.0
+    },
+    {
+      "name": "Criterion",
+      "usual_day": 11,
+      "amount": 11.0
+    },
+    {
+      "name": "DSA",
+      "usual_day": 12,
+      "amount": 11
+    },
+    {
+      "name": "Statefarm - Kate's Half",
+      "usual_day": 13,
+      "amount": 145.0
+    },
+    {
+      "name": "ChatGPT",
+      "usual_day": 15,
+      "amount": 20.0
+    },
+    {
+      "name": "Reform & Revolution",
+      "usual_day": 17,
+      "amount": 10.0
+    },
+    {
+      "name": "YouTube",
+      "usual_day": 20,
+      "amount": 9.06
+    },
+    {
+      "name": "Claude AI",
+      "usual_day": 25,
+      "amount": 20.0
+    },
+    {
+      "name": "iCloud",
+      "usual_day": 29,
+      "amount": 2.99
+    },
+    {
+      "name": "Eversource Electric - Bobbie's Half",
+      "usual_day": 24,
+      "amount": 105.0
+    },
+    {
+      "name": "National Grid Gas - Bobbie's Half",
+      "usual_day": 25,
+      "amount": 68.0
+    },{
+      "name": "OneDrive",
+      "usual_day": 13,
+      "amount": 1.99
+    }
+  ],
+  "credit_cards": [
+    {
+      "name": "Chase VISA",
+      "apr": 0.2499,
+      "balance": 9141.96,
+      "due_day": 24,
+      "min_pct": 0.0335,
+      "min_floor": 40.0,
+      "statement_day": null
+    },
+    {
+      "name": "Bank of America",
+      "apr": 0.2124,
+      "balance": 3070.63,
+      "due_day": 5,
+      "min_pct": 0.0274,
+      "min_floor": 35.0,
+      "statement_day": null
+    },
+    {
+      "name": "Samsung",
+      "apr": 0.0,
+      "balance": 1200.0,
+      "due_day": 3,
+      "min_pct": 0.0,
+      "min_floor": 40.12,
+      "statement_day": null
+    },
+    {
+      "name": "Aidvantage",
+      "apr": 0.0,
+      "balance": 3821.26,
+      "due_day": 11,
+      "min_pct": 0.0,
+      "min_floor": 0.0,
+      "statement_day": null
+    },
+    {
+      "name": "DentalFirst",
+      "apr": 0.3299,
+      "balance": 2236.0,
+      "due_day": 10,
+      "min_pct": 0.0362,
+      "min_floor": 30.0,
+      "statement_day": null
+    },
+    {
+      "name": "CreditOne",
+      "apr": 0.2949,
+      "balance": 976.13,
+      "due_day": 13,
+      "min_pct": 0.05,
+      "min_floor": 30.0,
+      "statement_day": null
+    }
+  ],
+  "ious": [
+    {
+      "name": "Mama",
+      "balance": 1050.0,
+      "apr": 0.0,
+      "due_day": null,
+      "min_pct": 0.0,
+      "min_floor": 0.0
+    },
+    {
+      "name": "Papa",
+      "balance": 300.0,
+      "apr": 0.0,
+      "due_day": null,
+      "min_pct": 0.0,
+      "min_floor": 0.0
+    },
+    {
+      "name": "Bobbie (NJ hotel)",
+      "balance": 300.0,
+      "apr": 0.0,
+      "due_day": null,
+      "min_pct": 0.0,
+      "min_floor": 0.0
+    }
+  ],
+  "oneoffs": [
+    {
+      "name": "Auto Repair Service",
+      "due_date": "2025-09-30",
+      "amount": 521.0,
+      "priority": 5,
+      "must_pay": true
+    },
+    {
+      "name": "MA Annual Inspection Sticker",
+      "due_date": "2025-11-05",
+      "amount": 35.0,
+      "priority": 1,
+      "must_pay": true
+    },
+    {
+      "name": "Car Registration",
+      "due_date": "2025-10-29",
+      "amount": 135.0,
+      "priority": 2,
+      "must_pay": true
+    },
+    {
+      "name": "MA License",
+      "due_date": "2025-10-29",
+      "amount": 115.0,
+      "priority": 2,
+      "must_pay": true
+    },{
+      "name": "Car Key Copy for Bobbie",
+      "due_date": "2025-11-29",
+      "amount": 130.0,
+      "priority": 3,
+      "must_pay": false
+    }
+  ],
+  "invest": {
+    "enable": true,
+    "hysa_apy": 0.045,
+    "expected_market_return": 0.07,
+    "use_dca": true,
+    "roth_target": 0.0,
+    "trad_target": 0.0,
+    "hysa_target": 0.0,
+    "robinhood_target": 0.0,
+    "ira_year_limit": 7000.0,
+    "roth_ok_today": true
+  },
+  "interest_mode": "statement_adb",
+  "extra_strategy": "avalanche"
+}

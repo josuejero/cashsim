@@ -1,5 +1,6 @@
 config.json
 bobbie_config.json
+!tests/fixtures/golden/**/config.json
 
 .streamlit/
 

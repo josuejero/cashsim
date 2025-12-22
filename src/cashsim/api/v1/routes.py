@@ -143,12 +143,15 @@ def risk(req: RiskRequest) -> RiskResponse:
             detail="Risk dependencies are not installed. Install with: pip install 'cashsim[ml]'",
         ) from exc
 
-    result = predict_overdraft_risk(
-        req.dials,
-        start=req.start,
-        horizon_days=req.horizon_days,
-        top_k=req.top_k,
-    )
+    try:
+        result = predict_overdraft_risk(
+            req.dials,
+            start=req.start,
+            horizon_days=req.horizon_days,
+            top_k=req.top_k,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
     return RiskResponse(
         probability=result.probability,
         horizon_days=result.horizon_days,

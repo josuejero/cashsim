@@ -5,3 +5,10 @@ bobbie_config.json
 
 # Streamlit secrets
 .streamlit/
+
+# DVC outputs
+data/synth/risk.parquet
+artifacts/risk/synth_meta.json
+artifacts/risk/model.joblib
+artifacts/risk/feature_names.json
+artifacts/risk/training_meta.json

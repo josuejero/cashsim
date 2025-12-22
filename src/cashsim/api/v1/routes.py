@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+import logging
+import time
 from io import StringIO
 from typing import Any
 
 import pandas as pd
 from fastapi import APIRouter, HTTPException
+from opentelemetry import trace
 
 from cashsim.compare import build_compare_payload, series_diff
 from cashsim.io.exporters import EVENT_COLUMNS, metrics_to_dict, normalize_series_for_export
-from cashsim.risk import predict_overdraft_risk
 from cashsim.sim.core import simulate_month
 
 from .schemas import (
@@ -24,6 +26,8 @@ from .schemas import (
     SimulateResponse,
 )
 
+logger = logging.getLogger(__name__)
+tracer = trace.get_tracer("cashsim.api")
 router = APIRouter()
 
 
@@ -90,10 +94,38 @@ def _events_csv_export(df: pd.DataFrame) -> str:
 
 @router.post("/simulate", response_model=SimulateResponse)
 def simulate(req: SimulateRequest) -> SimulateResponse:
+    t0 = time.perf_counter()
+    logger.info(
+        "simulate_start",
+        extra={
+            "event": "simulate_start",
+            "days": req.days,
+            "start_date": str(req.start),
+            "current_cash": float(req.dials.current_cash),
+            "weekday_earnings": float(req.dials.weekday_earnings),
+        },
+    )
+
     try:
-        df, metrics = simulate_month(req.dials, start=req.start, days=req.days)
+        with tracer.start_as_current_span("cashsim.simulate") as span:
+            span.set_attribute("cashsim.days", req.days)
+            span.set_attribute("cashsim.start_date", str(req.start))
+
+            df, metrics = simulate_month(req.dials, start=req.start, days=req.days)
+
+            span.set_attribute("cashsim.rows", int(len(df)))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+
+    dt_ms = (time.perf_counter() - t0) * 1000
+    logger.info(
+        "simulate_end",
+        extra={
+            "event": "simulate_end",
+            "duration_ms": round(dt_ms, 2),
+            "rows": int(len(df)),
+        },
+    )
 
     return SimulateResponse(
         metrics=SimMetricsWire.model_validate(metrics_to_dict(metrics)),
@@ -103,6 +135,14 @@ def simulate(req: SimulateRequest) -> SimulateResponse:
 
 @router.post("/risk", response_model=RiskResponse)
 def risk(req: RiskRequest) -> RiskResponse:
+    try:
+        from cashsim.risk import predict_overdraft_risk
+    except ModuleNotFoundError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Risk dependencies are not installed. Install with: pip install 'cashsim[ml]'",
+        ) from exc
+
     result = predict_overdraft_risk(
         req.dials,
         start=req.start,

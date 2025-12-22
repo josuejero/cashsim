@@ -19,7 +19,6 @@ from cashsim.io.config_io import load_config
 from cashsim.io.csv_import import import_input_tables
 from cashsim.io.csv_tables import export_input_tables
 from cashsim.io.exporters import metrics_to_dict, write_run
-from cashsim.risk import predict_overdraft_risk
 
 APP_HELP = (
     "CashSim CLI. Use `cashsim ui` for the Streamlit app and "
@@ -375,6 +374,13 @@ def risk(
     top_k: int = RISK_TOP_K_OPTION,
 ) -> None:
     """Estimate overdraft risk P(balance < 0 within N days)."""
+    try:
+        from cashsim.risk import predict_overdraft_risk
+    except ModuleNotFoundError as exc:
+        raise typer.BadParameter(
+            "Risk dependencies are not installed. Install them with: pip install 'cashsim[ml]'"
+        ) from exc
+
     s = _parse_date(start)
     run = run_from_config(config=config, start=s, days=horizon_days)
     result = predict_overdraft_risk(

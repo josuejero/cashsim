@@ -4,7 +4,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Protocol, cast
+from typing import Literal, Protocol, cast
 
 import joblib
 import pandas as pd
@@ -17,7 +17,7 @@ from cashsim.models import Dials
 class RiskDriver:
     feature: str
     contribution: float  # log-odds contribution
-    direction: str  # "increases" | "decreases"
+    direction: Literal["increases", "decreases"]
     value: float
 
 
@@ -68,7 +68,7 @@ def predict_overdraft_risk(
     proba = pipe.predict_proba(X)
     p = float(proba[0][1])
 
-    # Explainability: for logistic regression, approximate top drivers via coef * standardized value.
+    # Explainability: approximate logistic regression drivers via coef * standardized value.
     drivers: list[RiskDriver] = []
     try:
         scaler = pipe.named_steps.get("scaler")
@@ -87,9 +87,14 @@ def predict_overdraft_risk(
 
             pairs.sort(key=lambda t: abs(t[1]), reverse=True)
             for feat, c, val in pairs[: max(1, top_k)]:
-                direction = "increases" if c > 0 else "decreases"
+                direction: Literal["increases", "decreases"] = "increases" if c > 0 else "decreases"
                 drivers.append(
-                    RiskDriver(feature=feat, contribution=c, direction=direction, value=val)
+                    RiskDriver(
+                        feature=feat,
+                        contribution=c,
+                        direction=direction,
+                        value=val,
+                    )
                 )
     except Exception:
         # If explainability fails for any reason, we still return the probability.

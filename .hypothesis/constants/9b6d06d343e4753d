@@ -1,0 +1,4 @@
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/ml/features.py
+# hypothesis_version: 6.148.7
+
+[0.0, 'gas_fill_size', 'gas_pct', 'num_bills', 'num_debts', 'num_oneoffs', 'oneoff_total_horizon', 'safety_cushion', 'starting_balance', 'total_debt_balance', 'total_debt_minimum', 'total_monthly_bills', 'weekday_earnings']

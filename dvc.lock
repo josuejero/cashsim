@@ -5,12 +5,12 @@ stages:
     deps:
     - path: src/cashsim/ml/features.py
       hash: md5
-      md5: b192f536ae4b7413815e48f250fcd586
-      size: 2284
+      md5: 81771691caa359391a8bb4d5c27916b1
+      size: 2272
     - path: src/cashsim/ml/synth.py
       hash: md5
-      md5: b0954536e5d93273fbac048da5e3c412
-      size: 5420
+      md5: 17653ddb89419d5a1af34305980ac9df
+      size: 5417
     - path: src/cashsim/models.py
       hash: md5
       md5: ca3080fc090889cffb70e255842e7187
@@ -28,7 +28,7 @@ stages:
     outs:
     - path: artifacts/risk/synth_meta.json
       hash: md5
-      md5: 32bdbeba9ab1ab0ad4aaf338fbe829bc
+      md5: 8f9048b67de2a26d7fa14d54605f5592
       size: 443
     - path: data/synth/risk.parquet
       hash: md5
@@ -44,12 +44,12 @@ stages:
       size: 62734
     - path: src/cashsim/ml/features.py
       hash: md5
-      md5: b192f536ae4b7413815e48f250fcd586
-      size: 2284
+      md5: 81771691caa359391a8bb4d5c27916b1
+      size: 2272
     - path: src/cashsim/ml/train.py
       hash: md5
-      md5: ed0b838ff1ed651ccd6c279e6a3418fa
-      size: 4458
+      md5: a9b78485deb98fd31803d808ca6b480b
+      size: 4433
     params:
       params.yaml:
         risk.gbdt:
@@ -73,7 +73,7 @@ stages:
       size: 2161
     - path: artifacts/risk/training_meta.json
       hash: md5
-      md5: 4311603f85bc67392a27b85840bdd62c
+      md5: 55bac0b9838394b47b93e3b475586db3
       size: 367
   risk_eval:
     cmd: "python -m cashsim.ml.evaluate --data data/synth/risk.parquet --model artifacts/risk/model.joblib
@@ -89,12 +89,12 @@ stages:
       size: 62734
     - path: src/cashsim/ml/evaluate.py
       hash: md5
-      md5: e3fbe910c38bbfad7aee3c30e7626e52
+      md5: 0eb0b96d3a4f6859e9ebe5eeb17bac61
       size: 1803
     - path: src/cashsim/ml/features.py
       hash: md5
-      md5: b192f536ae4b7413815e48f250fcd586
-      size: 2284
+      md5: 81771691caa359391a8bb4d5c27916b1
+      size: 2272
     outs:
     - path: artifacts/risk/eval/metrics.json
       hash: md5

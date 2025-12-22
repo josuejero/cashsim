@@ -28,6 +28,10 @@ dependencies = [
   "fastapi>=0.110,<1.0",
   "uvicorn[standard]>=0.30,<1.0",
   "pydantic-settings>=2.0,<3.0",
+  "opentelemetry-api>=1.0.0",
+  "opentelemetry-sdk>=1.0.0",
+  "opentelemetry-exporter-otlp>=1.0.0",
+  "opentelemetry-instrumentation-fastapi>=0.40b0",
 
 ]
 
@@ -45,7 +49,6 @@ dev = [
   "bandit",
   "hypothesis>=6.112",
   "great-expectations>=0.18,<0.19",
-
 ]
 
 

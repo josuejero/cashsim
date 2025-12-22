@@ -42,9 +42,13 @@ The content is organized as follows:
 <directory_structure>
 .devcontainer/
   devcontainer.json
+.dvc/
+  .gitignore
+  config
 .github/
   workflows/
     ci.yml
+    containers.yml
 .hypothesis/
   constants/
     05003b5d7106c082
@@ -55,18 +59,29 @@ The content is organized as follows:
     1d3092d8c424df83
     1fe777c7bd202e05
     2d2210d13ed3429c
+    2f0b45a407e9f80a
     32200bad776ad762
     4416abb4093e924d
     44dff5104edbd685
     46926e31f2514b95
     4d39d059002a363c
+    4d41ab160aac9343
+    51f90c93684413bf
     5450694c90f33787
     55599460d862cb2d
     55ec52dcd3a47e5f
+    57ecd75bd22d45ba
     622e3ca106d878d8
+    6644a70af9c84af2
+    73899ade2b8255fb
     75e503854c8b7fc5
+    7b59ec4c49a5f649
     7fd29d8ab83924eb
+    815ee3c8feac8383
+    8770c75ae4a6d72a
+    8ea0004ab16a1b31
     8fc00151b57c2cff
+    a1e6efa76434a08a
     aadb416cbccb1f4e
     abd2f506ec370539
     ac417f1031ce8681
@@ -78,12 +93,17 @@ The content is organized as follows:
     b9ebac38c647a1bc
     c04f228ef21af2d4
     c326761965c25402
+    c5c0de2b3d0e632a
     ce88c44d7647a3bf
     d0798f0c54aaac4c
+    d68a94577d7f60e8
     da39a3ee5e6b4b0d
     dc15ef223874a3ab
     dc690edcfb974253
+    dc7037e7ba90b1c4
+    de45c34c71e42733
     df4a86fb1f327905
+    e134d17f15a2f0b5
     e17294144a5522a0
     e1ac37e50638a5b7
     e379c7b39a11f107
@@ -93,11 +113,24 @@ The content is organized as follows:
     eb6d189fc4afb526
     ed780645df24b02a
     f1296bf796213b43
+    f30a678f75a14bc7
     f4f937713280162b
     f7c3bc892fba18c9
+    f928e91e129dc7a6
+artifacts/
+  risk/
+    eval/
+      calibration.png
+      metrics.json
+    .gitignore
+    synth_meta.json
+data/
+  synth/
+    risk.parquet
 docs/
   api.md
   cli.md
+  deploy-options.md
   SECRETS.md
 examples/
   configs/
@@ -106,6 +139,8 @@ examples/
     simple_baseline.json
     stress_tight.fixed.json
     stress_tight.json
+  requests/
+    risk_simple.json
 gx/
   expectations/
     cashsim/
@@ -135,6 +170,40 @@ inputs_out/
   manifest.json
   oneoffs.csv
   transactions.csv
+mlruns/
+  999480071915476583/
+    af628dfdd5f54978be20378906ddf12b/
+      artifacts/
+        feature_names.json
+        model.joblib
+        training_meta.json
+      metrics/
+        auc
+        brier
+      params/
+        logreg.C
+        logreg.max_iter
+        model_type
+        seed
+        test_size
+      tags/
+        mlflow.runName
+        mlflow.source.git.commit
+        mlflow.source.name
+        mlflow.source.type
+        mlflow.user
+      meta.yaml
+    meta.yaml
+ops/
+  grafana/
+    provisioning/
+      dashboards/
+        cashsim-spanmetrics.json
+      datasources/
+        datasources.yml
+  otel/
+    otelcol-config.yaml
+    prometheus.yml
 scripts/
   __init__.py
   gx_compat.py
@@ -163,6 +232,17 @@ src/
       csv_tables.py
       exporters.py
       gsheets.py
+    ml/
+      __init__.py
+      evaluate.py
+      features.py
+      init.py
+      synth.py
+      train.py
+    observability/
+      __init__.py
+      logging.py
+      otel.py
     planning/
       __init__.py
       planner.py
@@ -194,10 +274,12 @@ src/
     compare.py
     constants.py
     models.py
+    risk.py
 tests/
   contract/
     test_api_compare.py
     test_api_export.py
+    test_api_risk.py
     test_api_simulate.py
   data_quality/
     test_gx_suites.py
@@ -235,17 +317,28 @@ tests/
     test_cli_compare.py
     test_cli_determinism.py
     test_cli_export.py
+    test_risk_monotonic.py
+    test_risk_pipeline_smoke.py
   io/
     test_csv_roundtrip.py
+  conftest.py
   test_interest_decimal.py
   test_property_adb.py
+.dockerignore
+.dvcignore
 .gitignore
 .monkey-mods.txt
 .pre-commit-config.yaml
 .repomixignore
 config.edited.json
+docker-compose.yml
+Dockerfile
+dvc.lock
+dvc.yaml
 example.json
+mlflow.db
 mypy.ini
+params.yaml
 patch.diff
 pyproject.toml
 pyrightconfig.json
@@ -257,6 +350,576 @@ run.json
 
 <files>
 This section contains the contents of the repository's files.
+
+<file path=".github/workflows/containers.yml">
+name: containers
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+  attestations: write
+
+jobs:
+  build-push-attest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [api, ui]
+
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}-${{ matrix.service }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+</file>
+
+<file path="docs/deploy-options.md">
+# Deploy options (no-infra / free tiers)
+
+## Option A: Streamlit Community Cloud (UI)
+Best for: quick public demo of the UI.
+
+### Steps
+1. Push the repo to GitHub.
+2. Ensure your entrypoint is the Streamlit app (e.g., `src/cashsim/ui/streamlit_app.py`).
+3. Add a dependency file for Community Cloud builds. A safe default for this repo is a `requirements.txt` at repo root:
+</file>
+
+<file path="ops/grafana/provisioning/dashboards/cashsim-spanmetrics.json">
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "-"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}},
+      "targets": [
+        {
+          "expr": "sum(rate(cashsim_spanmetrics_calls_total[1m])) by (span_name)",
+          "refId": "A"
+        }
+      ],
+      "title": "Span call rate (by span_name)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "-"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "id": 2,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(cashsim_spanmetrics_latency_bucket[5m])) by (le, span_name))",
+          "refId": "A"
+        }
+      ],
+      "title": "p95 span latency (5m)",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["cashsim", "otel"],
+  "templating": {"list": []},
+  "time": {"from": "now-15m", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "CashSim – Span Metrics",
+  "uid": "cashsim-spanmetrics",
+  "version": 1
+}
+</file>
+
+<file path="ops/grafana/provisioning/datasources/datasources.yml">
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+
+  - name: Jaeger
+    type: jaeger
+    access: proxy
+    url: http://jaeger:16686
+</file>
+
+<file path="ops/otel/otelcol-config.yaml">
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch: {}
+
+connectors:
+  # Convert trace spans into Prometheus metrics (latency, counts, error rates)
+  spanmetrics:
+    namespace: cashsim.spanmetrics
+
+exporters:
+  # Send traces to Jaeger via OTLP
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+  # Expose metrics for Prometheus to scrape
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    resource_to_telemetry_conversion:
+      enabled: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/jaeger, spanmetrics]
+
+    metrics:
+      receivers: [spanmetrics]
+      exporters: [prometheus]
+</file>
+
+<file path="ops/otel/prometheus.yml">
+global:
+  scrape_interval: 10s
+
+scrape_configs:
+  - job_name: "otel-collector-spanmetrics"
+    static_configs:
+      - targets: ["otel-collector:8889"]
+</file>
+
+<file path="src/cashsim/observability/__init__.py">
+"""Observability helpers (OpenTelemetry + structured logging)."""
+</file>
+
+<file path="src/cashsim/observability/logging.py">
+from __future__ import annotations
+
+import json
+import logging
+import os
+import sys
+from datetime import datetime, timezone
+
+from opentelemetry import trace
+
+
+class TraceContextFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        span = trace.get_current_span()
+        ctx = span.get_span_context() if span is not None else None
+
+        if ctx and ctx.is_valid:
+            record.trace_id = f"{ctx.trace_id:032x}"
+            record.span_id = f"{ctx.span_id:016x}"
+        else:
+            record.trace_id = None
+            record.span_id = None
+
+        return True
+
+
+class JsonFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        base = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "msg": record.getMessage(),
+            "trace_id": getattr(record, "trace_id", None),
+            "span_id": getattr(record, "span_id", None),
+        }
+
+        # Include any "extra" fields that were attached to the LogRecord
+        reserved = {
+            "name",
+            "msg",
+            "args",
+            "levelname",
+            "levelno",
+            "pathname",
+            "filename",
+            "module",
+            "exc_info",
+            "exc_text",
+            "stack_info",
+            "lineno",
+            "funcName",
+            "created",
+            "msecs",
+            "relativeCreated",
+            "thread",
+            "threadName",
+            "processName",
+            "process",
+        }
+
+        extras = {
+            k: v
+            for k, v in record.__dict__.items()
+            if k not in reserved and k not in {"trace_id", "span_id"}
+        }
+
+        if extras:
+            base.update(extras)
+
+        return json.dumps(base, default=str)
+
+
+def configure_logging() -> None:
+    level = os.getenv("LOG_LEVEL", "INFO").upper()
+    fmt = os.getenv("LOG_FORMAT", "json").lower()
+
+    root = logging.getLogger()
+    root.setLevel(level)
+
+    # Replace handlers to avoid duplicate logs when reloading
+    root.handlers = []
+
+    handler = logging.StreamHandler(sys.stdout)
+    handler.addFilter(TraceContextFilter())
+
+    if fmt == "json":
+        handler.setFormatter(JsonFormatter())
+    else:
+        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+
+    root.addHandler(handler)
+</file>
+
+<file path="src/cashsim/observability/otel.py">
+from __future__ import annotations
+
+import os
+from functools import lru_cache
+from typing import Optional
+
+from opentelemetry import trace
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+
+
+def _truthy(value: Optional[str]) -> bool:
+    if value is None:
+        return False
+    return value.strip().lower() in {"1", "true", "t", "yes", "y", "on"}
+
+
+def otel_enabled() -> bool:
+    # Explicit flag wins
+    if "CASHSIM_OTEL_ENABLED" in os.environ:
+        return _truthy(os.getenv("CASHSIM_OTEL_ENABLED"))
+
+    # Otherwise, enable if an OTLP endpoint is provided
+    return bool(os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT"))
+
+
+@lru_cache
+def get_tracer() -> trace.Tracer:
+    return trace.get_tracer("cashsim")
+
+
+def configure_tracing(service_name: str = "cashsim") -> None:
+    """Initialize tracing only once.
+
+    Uses OTLP/gRPC exporter (endpoint from OTEL_EXPORTER_OTLP_ENDPOINT).
+    """
+    if not otel_enabled():
+        return
+
+    # Avoid re-configuring if someone else already configured a provider
+    current = trace.get_tracer_provider()
+    if isinstance(current, TracerProvider):
+        return
+
+    endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+    insecure = _truthy(os.getenv("OTEL_EXPORTER_OTLP_INSECURE", "true"))
+
+    resource = Resource.create(
+        {
+            "service.name": os.getenv("OTEL_SERVICE_NAME", service_name),
+            "service.version": os.getenv("OTEL_SERVICE_VERSION", "dev"),
+        }
+    )
+
+    provider = TracerProvider(resource=resource)
+    exporter = OTLPSpanExporter(endpoint=endpoint, insecure=insecure)
+    provider.add_span_processor(BatchSpanProcessor(exporter))
+
+    trace.set_tracer_provider(provider)
+
+
+def instrument_fastapi(app) -> None:
+    """Auto-instrument FastAPI request handling."""
+    if not otel_enabled():
+        return
+
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+    # Exclude super-noisy endpoints if desired
+    excluded = os.getenv("OTEL_EXCLUDED_URLS", "health")
+    FastAPIInstrumentor.instrument_app(app, excluded_urls=excluded)
+</file>
+
+<file path=".dockerignore">
+.git
+.github
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.venv
+venv
+.env
+.env.*
+*.egg-info
+.dist
+build
+
+# Common project outputs
+outputs
+mlruns
+.dvc
+.dvc/cache
+
+# Local notebooks / scratch
+notebooks
+scratch
+
+# OS
+.DS_Store
+</file>
+
+<file path="docker-compose.yml">
+name: cashsim
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["cashsim", "api", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      # Turn on OTel for the API and send spans to the Collector
+      CASHSIM_OTEL_ENABLED: "true"
+      OTEL_SERVICE_NAME: "cashsim-api"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_EXPORTER_OTLP_INSECURE: "true"
+
+      # Logging
+      LOG_LEVEL: "INFO"
+      LOG_FORMAT: "json"
+
+      # Optional: set if you add explicit sampling controls
+      # OTEL_TRACES_SAMPLER: "parentbased_traceidratio"
+      # OTEL_TRACES_SAMPLER_ARG: "1.0"
+
+    ports:
+      - "8000:8000"
+    depends_on:
+      - otel-collector
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bash",
+          "-lc",
+          'python -c "import urllib.request; urllib.request.urlopen(''http://localhost:8000/v1/health'').read()"',
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # Streamlit should bind to 0.0.0.0 in containers
+    command:
+      ["cashsim", "ui", "--headless", "--host", "0.0.0.0", "--port", "8501"]
+    environment:
+      LOG_LEVEL: "INFO"
+      LOG_FORMAT: "json"
+      # Optional: point UI at API
+      CASHSIM_API_BASE_URL: "http://api:8000"
+    ports:
+      - "8501:8501"
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.141.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./ops/otel/otelcol-config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+      - "8889:8889" # Prometheus exporter (spanmetrics)
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.55
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      METRICS_STORAGE_TYPE: "prometheus"
+      PROMETHEUS_SERVER_URL: "http://prometheus:9090"
+    command:
+      - "--prometheus.query.support-spanmetrics-connector=true"
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "14268:14268" # HTTP thrift (optional)
+      - "4319:4317" # Map Jaeger OTLP gRPC (optional local)
+
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    volumes:
+      - ./ops/otel/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - ./ops/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+networks:
+  default:
+    name: cashsim
+</file>
+
+<file path="Dockerfile">
+# syntax=docker/dockerfile:1.7
+
+FROM python:3.12-slim AS builder
+
+WORKDIR /app
+
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Build tooling for wheels (safe default for scientific deps)
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends build-essential \
+  && rm -rf /var/lib/apt/lists/*
+
+# Install build backend
+RUN python -m pip install --upgrade pip build
+
+# Copy only build inputs first (better layer cache)
+COPY pyproject.toml README.md ./
+COPY src ./src
+
+# Build a wheel
+RUN python -m build --wheel --outdir /wheels
+
+
+FROM python:3.12-slim AS runtime
+
+# Use uid 1000 to play nicely with Hugging Face Docker Spaces
+ARG APP_USER=app
+ARG APP_UID=1000
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# Create non-root user
+RUN useradd -m -u ${APP_UID} ${APP_USER}
+
+WORKDIR /app
+
+# Install the built wheel
+COPY --from=builder /wheels /wheels
+RUN python -m pip install --no-cache-dir --upgrade pip \
+  && python -m pip install --no-cache-dir /wheels/*.whl \
+  && rm -rf /wheels
+
+USER ${APP_USER}
+
+# Expose default ports (API + UI)
+EXPOSE 8000 8501
+
+# Default shows help; compose overrides commands.
+ENTRYPOINT ["bash", "-lc"]
+CMD ["cashsim --help"]
+</file>
+
+<file path=".dvc/.gitignore">
+/config.local
+/tmp
+/cache
+</file>
+
+<file path=".dvc/config">
+
+</file>
 
 <file path=".hypothesis/constants/05003b5d7106c082">
 # file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/models.py
@@ -314,6 +977,13 @@ This section contains the contents of the repository's files.
 ['extra', 'finance', 'min']
 </file>
 
+<file path=".hypothesis/constants/2f0b45a407e9f80a">
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/compare.py
+# hypothesis_version: 6.148.7
+
+[0.0, 0.01, 0.5, '## Category totals', '## Metrics', '## Timeline deltas', '_a', '_b', 'a', 'amount', 'amt', 'b', 'balance', 'bill_due', 'category_totals', 'cc_extra_on_due', 'cc_extra_paid', 'cc_interest_posted', 'cc_min_paid', 'cc_mins_paid', 'coerce', 'cushion_breach_date', 'date', 'days', 'debt_payments_total', 'delta', 'delta_days', 'earn', 'first_negative_date', 'gas_bucket', 'income', 'interest_posted', 'max_abs_delta', 'max_abs_delta_date', 'mean_abs_delta', 'meta', 'metrics', 'min_balance_date', 'non_debt_bills', 'oneoff_paid', 'oneoffs_paid', 'outer', 'rmse', 'series_columns', 'series_summary', 'spend_total', 'start', 'threshold', 'timeline', 'total_cc_balance', 'total_iou_balance', '|---|---:|---:|---:|', '|---|---|---|---:|']
+</file>
+
 <file path=".hypothesis/constants/32200bad776ad762">
 # file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/__init__.py
 # hypothesis_version: 6.148.7
@@ -349,6 +1019,20 @@ This section contains the contents of the repository's files.
 [0.0, 7.0]
 </file>
 
+<file path=".hypothesis/constants/4d41ab160aac9343">
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/batch.py
+# hypothesis_version: 6.148.7
+
+[]
+</file>
+
+<file path=".hypothesis/constants/51f90c93684413bf">
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/io/exporters.py
+# hypothesis_version: 6.148.7
+
+['%.2f', ',', ':', '_bal', 'balance', 'bill_due', 'cc_', 'cc_events', 'cc_extra_on_due', 'cc_interest_posted', 'cc_min_paid', 'compare.json', 'config_path', 'csv', 'date', 'days', 'earn', 'events.csv', 'fillups', 'gas_bucket', 'include_events', 'json', 'kind', 'metrics.json', 'object', 'oneoff_contribs', 'oneoff_paid', 'raw', 'records', 'run_meta.json', 'series.csv', 'series.json', 'series_diff.csv', 'series_format', 'start', 'total_cc_balance', 'total_iou_balance', 'utf-8', 'weekday']
+</file>
+
 <file path=".hypothesis/constants/5450694c90f33787">
 # file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/sim/types.py
 # hypothesis_version: 6.140.3
@@ -370,11 +1054,32 @@ This section contains the contents of the repository's files.
 [0.0, 1e-09, '%a', '[^a-z0-9_]+', '_', 'adb_days', 'adb_sum', 'avalanche', 'balance', 'bill_due', 'cc_events', 'cc_extra_on_due', 'cc_interest_posted', 'cc_min_paid', 'cycle_due', 'cycle_start', 'date', 'due_simple', 'earn', 'fillups', 'gas_bucket', 'grace_active', 'min_due_locked', 'next_stmt', 'oneoff_contribs', 'oneoff_paid', 'oneoffs', 'payments_since_stmt', 'statement_adb', 'statement_balance', 'total_cc_balance', 'total_iou_balance', 'weekday']
 </file>
 
+<file path=".hypothesis/constants/57ecd75bd22d45ba">
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/io/csv_tables.py
+# hypothesis_version: 6.148.7
+
+['+00:00', 'Int64', 'Z', 'amount', 'apr', 'balance', 'bills', 'bills.csv', 'category', 'credit_cards', 'credit_cards.csv', 'date', 'dials', 'dials.json', 'due_date', 'due_day', 'files', 'generated_at', 'ious', 'ious.csv', 'json', 'manifest', 'manifest.json', 'min_floor', 'min_pct', 'must_pay', 'name', 'notes', 'oneoffs', 'oneoffs.csv', 'priority', 'schema_version', 'transactions', 'transactions.csv', 'usual_day', 'utf-8', 'v1']
+</file>
+
 <file path=".hypothesis/constants/622e3ca106d878d8">
 # file: /Users/wholesway/Dev/01-personal/CashSim/.venv/bin/pytest
 # hypothesis_version: 6.140.3
 
 ['.exe', '__main__']
+</file>
+
+<file path=".hypothesis/constants/6644a70af9c84af2">
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/cli.py
+# hypothesis_version: 6.148.7
+
+[0.01, 366, 8000, '--a', '--b', '--base-config', '--config', '--days', '--events/--no-events', '--from', '--horizon-days', '--host', '--model', '--out', '--overwrite', '--port', '--reload', '--report', '--series-format', '--series/--no-series', '--start', '--strict', '--threshold', '--top-k', '127.0.0.1', 'Config A (baseline).', 'Output directory.', '__file__', '__main__', 'allow_extra_args', 'cashsim.api.app:app', 'compare.json', 'config.imported.json', 'contribution', 'csv', 'csv|json', 'direction', 'drivers', 'export-inputs', 'feature', 'horizon_days', 'import', 'inputs_out', 'meta', 'metrics', 'out', 'probability', 'records', 'run', 'series', 'series_columns', 'series_diff.csv', 'streamlit', 'ui', 'utf-8', 'uvicorn', 'value']
+</file>
+
+<file path=".hypothesis/constants/73899ade2b8255fb">
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/api/v1/routes.py
+# hypothesis_version: 6.148.7
+
+[400, '%.2f', '/compare', '/export', '/risk', '/simulate', 'csv', 'date', 'days', 'events_csv', 'include_events', 'kind', 'meta', 'metrics', 'raw', 'records', 'series_columns', 'series_csv', 'series_diff', 'series_format', 'series_json', 'start']
 </file>
 
 <file path=".hypothesis/constants/75e503854c8b7fc5">
@@ -384,6 +1089,13 @@ This section contains the contents of the repository's files.
 [0.0, 365, 'adb_days', 'adb_sum', 'cycle_due', 'min_due_locked', 'next_stmt', 'payments_since_stmt', 'statement_balance']
 </file>
 
+<file path=".hypothesis/constants/7b59ec4c49a5f649">
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/risk.py
+# hypothesis_version: 6.148.7
+
+['coef_', 'decreases', 'increases', 'model', 'scaler']
+</file>
+
 <file path=".hypothesis/constants/7fd29d8ab83924eb">
 # file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/compare.py
 # hypothesis_version: 6.148.7
@@ -391,11 +1103,39 @@ This section contains the contents of the repository's files.
 [0.0, 0.01, 0.5, '## Category totals', '## Metrics', '## Timeline deltas', '_a', '_b', 'a', 'amount', 'amt', 'b', 'balance', 'bill_due', 'category_totals', 'cc_extra_on_due', 'cc_extra_paid', 'cc_interest_posted', 'cc_min_paid', 'cc_mins_paid', 'coerce', 'cushion_breach_date', 'date', 'days', 'debt_payments_total', 'delta', 'delta_days', 'earn', 'first_negative_date', 'gas_bucket', 'income', 'interest_posted', 'max_abs_delta', 'max_abs_delta_date', 'mean_abs_delta', 'meta', 'metrics', 'min_balance_date', 'non_debt_bills', 'oneoff_paid', 'oneoffs_paid', 'outer', 'rmse', 'series_columns', 'series_summary', 'spend_total', 'start', 'threshold', 'timeline', 'total_cc_balance', 'total_iou_balance', '|---|---:|---:|---:|', '|---|---|---|---:|']
 </file>
 
+<file path=".hypothesis/constants/815ee3c8feac8383">
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/api/middleware.py
+# hypothesis_version: 6.148.7
+
+[1000, 'server-timing', 'x-request-id']
+</file>
+
+<file path=".hypothesis/constants/8770c75ae4a6d72a">
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/api/settings.py
+# hypothesis_version: 6.148.7
+
+[8000, '*', '127.0.0.1', 'CASHSIM_', 'info']
+</file>
+
+<file path=".hypothesis/constants/8ea0004ab16a1b31">
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/scripts/gx_validate_inputs.py
+# hypothesis_version: 6.148.7
+
+[-1000000000000.0, 0.01, 1000000000000.0, 1000, '--inputs', '.csv', '__main__', 'amount', 'apr', 'balance', 'bills.csv', 'cashsim.bills.v1', 'cashsim.ious.v1', 'cashsim.oneoffs.v1', 'cashsim_inputs', 'category', 'coerce', 'columns', 'credit_cards.csv', 'date', 'due_date', 'due_day', 'file', 'ious.csv', 'min_floor', 'min_pct', 'must_pay', 'name', 'notes', 'oneoffs.csv', 'priority', 'ranges', 'required_non_null', 'transactions.csv', 'usual_day']
+</file>
+
 <file path=".hypothesis/constants/8fc00151b57c2cff">
 # file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/sim/core.py
 # hypothesis_version: 6.148.7
 
 [0.0, 1e-09, '%a', '[^a-z0-9_]+', '_', 'adb_days', 'adb_sum', 'avalanche', 'balance', 'bill_due', 'cc_events', 'cc_extra_on_due', 'cc_interest_posted', 'cc_min_paid', 'cycle_due', 'cycle_start', 'date', 'due_simple', 'earn', 'fillups', 'gas_bucket', 'grace_active', 'min_due_locked', 'next_stmt', 'oneoff_contribs', 'oneoff_paid', 'oneoffs', 'payments_since_stmt', 'statement_adb', 'statement_balance', 'total_cc_balance', 'total_iou_balance', 'weekday']
+</file>
+
+<file path=".hypothesis/constants/a1e6efa76434a08a">
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/ml/synth.py
+# hypothesis_version: 6.148.7
+
+[0.0, 0.01, 0.05, 0.25, 0.35, 1.0, 300, 900, 1337, 1500, 2500, 4000, 5000, 8000, '--horizon-days', '--meta', '--n', '--out', '--seed', '--start', '2025-01-01', 'Output Parquet path', 'Z', '__main__', 'balance', 'features', 'generated_at', 'horizon_days', 'label', 'label_overdraft', 'n', 'n_samples', 'params.yaml', 'risk', 'seed', 'start', 'start_date']
 </file>
 
 <file path=".hypothesis/constants/aadb416cbccb1f4e">
@@ -475,6 +1215,13 @@ This section contains the contents of the repository's files.
 [366, 8000, '--a', '--b', '--config', '--days', '--events/--no-events', '--host', '--out', '--overwrite', '--port', '--reload', '--series-format', '--series/--no-series', '--start', '127.0.0.1', 'Config A (baseline).', 'Output directory.', '__file__', '__main__', 'allow_extra_args', 'balance', 'cashsim.api.app:app', 'compare.json', 'csv', 'csv|json', 'metrics', 'out', 'records', 'run', 'series', 'series_diff.csv', 'streamlit', 'total_cc_balance', 'total_iou_balance', 'ui', 'utf-8', 'uvicorn']
 </file>
 
+<file path=".hypothesis/constants/c5c0de2b3d0e632a">
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/scripts/gx_compat.py
+# hypothesis_version: 6.148.7
+
+[]
+</file>
+
 <file path=".hypothesis/constants/ce88c44d7647a3bf">
 # file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/constants.py
 # hypothesis_version: 6.148.7
@@ -487,6 +1234,13 @@ This section contains the contents of the repository's files.
 # hypothesis_version: 6.148.7
 
 []
+</file>
+
+<file path=".hypothesis/constants/d68a94577d7f60e8">
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/ml/features.py
+# hypothesis_version: 6.148.7
+
+[0.0, 'gas_fill_size', 'gas_pct', 'num_bills', 'num_debts', 'num_oneoffs', 'oneoff_total_horizon', 'safety_cushion', 'starting_balance', 'total_debt_balance', 'total_debt_minimum', 'total_monthly_bills', 'weekday_earnings']
 </file>
 
 <file path=".hypothesis/constants/da39a3ee5e6b4b0d">
@@ -510,11 +1264,32 @@ This section contains the contents of the repository's files.
 []
 </file>
 
+<file path=".hypothesis/constants/dc7037e7ba90b1c4">
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/api/v1/schemas.py
+# hypothesis_version: 6.148.7
+
+[0.01, 366, 'csv', 'decreases', 'forbid', 'increases', 'json']
+</file>
+
+<file path=".hypothesis/constants/de45c34c71e42733">
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/scripts/__init__.py
+# hypothesis_version: 6.148.7
+
+[]
+</file>
+
 <file path=".hypothesis/constants/df4a86fb1f327905">
 # file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/sim/interest.py
 # hypothesis_version: 6.148.7
 
 [0.0, 365, 'adb_days', 'adb_sum', 'cycle_due', 'min_due_locked', 'next_stmt', 'payments_since_stmt', 'statement_balance']
+</file>
+
+<file path=".hypothesis/constants/e134d17f15a2f0b5">
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/io/csv_import.py
+# hypothesis_version: 6.148.7
+
+[0.0, 0.02, 25.0, 100, 1000, '0', '1', 'bills', 'bills.csv', 'credit_cards', 'credit_cards.csv', 'dials.json', 'due_day', 'f', 'false', 'ious', 'ious.csv', 'json', 'must_pay', 'n', 'no', 'oneoffs', 'oneoffs.csv', 'records', 't', 'true', 'usual_day', 'utf-8', 'y', 'yes']
 </file>
 
 <file path=".hypothesis/constants/e17294144a5522a0">
@@ -580,6 +1355,13 @@ This section contains the contents of the repository's files.
 [4096]
 </file>
 
+<file path=".hypothesis/constants/f30a678f75a14bc7">
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/api/app.py
+# hypothesis_version: 6.148.7
+
+['*', ',', '/healthz', '/v1', '1.0.0', 'CashSim API', 'ok', 'status', 'v1']
+</file>
+
 <file path=".hypothesis/constants/f4f937713280162b">
 # file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/cli.py
 # hypothesis_version: 6.148.7
@@ -592,6 +1374,104 @@ This section contains the contents of the repository's files.
 # hypothesis_version: 6.148.7
 
 [0.0, 0.045, 0.07, 7000.0, 'Payment due day', 'amount', 'avalanche', 'due_simple', 'e.g. 0.02 for 2%', 'snowball', 'statement_adb']
+</file>
+
+<file path=".hypothesis/constants/f928e91e129dc7a6">
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/scripts/gx_suites.py
+# hypothesis_version: 6.148.7
+
+[-1000000000000.0, 0.01, 1000000000000.0, 1000, '__main__', 'amount', 'apr', 'balance', 'cashsim.bills.v1', 'cashsim.ious.v1', 'cashsim.oneoffs.v1', 'category', 'date', 'due_date', 'due_day', 'file', 'min_floor', 'min_pct', 'must_pay', 'name', 'notes', 'priority', 'usual_day']
+</file>
+
+<file path="artifacts/risk/eval/metrics.json">
+{
+  "auc": 0.9740514319888365,
+  "brier": 0.06049226719517804,
+  "calibration_bins": 10,
+  "calibration": [
+    {
+      "bin": 0,
+      "mean_pred": 0.00013488300518585826,
+      "frac_pos": 0.0
+    },
+    {
+      "bin": 1,
+      "mean_pred": 0.0016715061542548115,
+      "frac_pos": 0.0
+    },
+    {
+      "bin": 2,
+      "mean_pred": 0.01026828607606333,
+      "frac_pos": 0.03
+    },
+    {
+      "bin": 3,
+      "mean_pred": 0.04069979495750931,
+      "frac_pos": 0.03
+    },
+    {
+      "bin": 4,
+      "mean_pred": 0.13806197128393577,
+      "frac_pos": 0.1
+    },
+    {
+      "bin": 5,
+      "mean_pred": 0.3405758219458675,
+      "frac_pos": 0.26
+    },
+    {
+      "bin": 6,
+      "mean_pred": 0.6691403072900733,
+      "frac_pos": 0.67
+    },
+    {
+      "bin": 7,
+      "mean_pred": 0.8857593915933731,
+      "frac_pos": 0.95
+    },
+    {
+      "bin": 8,
+      "mean_pred": 0.9791480527333273,
+      "frac_pos": 1.0
+    },
+    {
+      "bin": 9,
+      "mean_pred": 0.9984911340714637,
+      "frac_pos": 1.0
+    }
+  ]
+}
+</file>
+
+<file path="artifacts/risk/.gitignore">
+/model.joblib
+/feature_names.json
+/training_meta.json
+</file>
+
+<file path="artifacts/risk/synth_meta.json">
+{
+  "generated_at": "2025-12-22T17:09:20.860648Z",
+  "n": 1000,
+  "seed": 1337,
+  "start": "2025-01-01",
+  "horizon_days": 30,
+  "features": [
+    "starting_balance",
+    "safety_cushion",
+    "weekday_earnings",
+    "total_monthly_bills",
+    "total_debt_balance",
+    "total_debt_minimum",
+    "oneoff_total_horizon",
+    "gas_pct",
+    "gas_fill_size",
+    "num_bills",
+    "num_debts",
+    "num_oneoffs"
+  ],
+  "label": "label_overdraft"
+}
 </file>
 
 <file path="docs/api.md">
@@ -994,6 +1874,31 @@ client_x509_cert_url = "https://www.googleapis.com/robot/v1/metadata/x509/svc-ac
   "interest_mode": "statement_adb",
   "extra_strategy": "avalanche",
   "blackouts": []
+}
+</file>
+
+<file path="examples/requests/risk_simple.json">
+{
+  "start": "2025-01-01",
+  "horizon_days": 30,
+  "top_k": 5,
+  "dials": {
+    "current_cash": 300,
+    "safety_cushion": 150,
+    "weekday_earnings": 120,
+    "gas_pct": 0.1,
+    "gas_fill_size": 25,
+    "bills": [{"name": "rent", "amount": 200, "due_day": 5}],
+    "credit_cards": [],
+    "ious": [],
+    "oneoffs": [],
+    "invest": {"enable": true, "hysa_apy": 0.045, "expected_market_return": 0.07, "use_dca": true,
+               "roth_target": 0.0, "trad_target": 0.0, "hysa_target": 0.0, "robinhood_target": 0.0,
+               "ira_year_limit": 7000.0, "roth_ok_today": true},
+    "interest_mode": "statement_adb",
+    "extra_strategy": "avalanche",
+    "blackouts": []
+  }
 }
 </file>
 
@@ -1554,6 +2459,117 @@ Car Key Copy for Bobbie,2025-11-29,130.0,3,False
 
 <file path="inputs_out/transactions.csv">
 date,name,amount,category,notes
+</file>
+
+<file path="mlruns/999480071915476583/af628dfdd5f54978be20378906ddf12b/artifacts/feature_names.json">
+[
+  "starting_balance",
+  "safety_cushion",
+  "weekday_earnings",
+  "total_monthly_bills",
+  "total_debt_balance",
+  "total_debt_minimum",
+  "oneoff_total_horizon",
+  "gas_pct",
+  "gas_fill_size",
+  "num_bills",
+  "num_debts",
+  "num_oneoffs"
+]
+</file>
+
+<file path="mlruns/999480071915476583/af628dfdd5f54978be20378906ddf12b/artifacts/training_meta.json">
+{
+  "trained_at": "2025-12-22T17:10:35.693543Z",
+  "git_sha": "21e957fb1f6dd5970561f423a8d87b674518e58d",
+  "data": "data/synth/risk.parquet",
+  "n_rows": 1000,
+  "model_type": "logreg",
+  "model_params": {
+    "C": 1.0,
+    "max_iter": 2000
+  },
+  "seed": 1337,
+  "test_size": 0.2,
+  "metrics": {
+    "auc": 0.9724037763253448,
+    "brier": 0.06569324164574541
+  }
+}
+</file>
+
+<file path="mlruns/999480071915476583/af628dfdd5f54978be20378906ddf12b/metrics/auc">
+1766423436090 0.9724037763253448 0
+</file>
+
+<file path="mlruns/999480071915476583/af628dfdd5f54978be20378906ddf12b/metrics/brier">
+1766423436090 0.06569324164574541 0
+</file>
+
+<file path="mlruns/999480071915476583/af628dfdd5f54978be20378906ddf12b/params/logreg.C">
+1.0
+</file>
+
+<file path="mlruns/999480071915476583/af628dfdd5f54978be20378906ddf12b/params/logreg.max_iter">
+2000
+</file>
+
+<file path="mlruns/999480071915476583/af628dfdd5f54978be20378906ddf12b/params/model_type">
+logreg
+</file>
+
+<file path="mlruns/999480071915476583/af628dfdd5f54978be20378906ddf12b/params/seed">
+1337
+</file>
+
+<file path="mlruns/999480071915476583/af628dfdd5f54978be20378906ddf12b/params/test_size">
+0.2
+</file>
+
+<file path="mlruns/999480071915476583/af628dfdd5f54978be20378906ddf12b/tags/mlflow.runName">
+risk-logreg
+</file>
+
+<file path="mlruns/999480071915476583/af628dfdd5f54978be20378906ddf12b/tags/mlflow.source.git.commit">
+21e957fb1f6dd5970561f423a8d87b674518e58d
+</file>
+
+<file path="mlruns/999480071915476583/af628dfdd5f54978be20378906ddf12b/tags/mlflow.source.name">
+/Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/ml/train.py
+</file>
+
+<file path="mlruns/999480071915476583/af628dfdd5f54978be20378906ddf12b/tags/mlflow.source.type">
+LOCAL
+</file>
+
+<file path="mlruns/999480071915476583/af628dfdd5f54978be20378906ddf12b/tags/mlflow.user">
+wholesway
+</file>
+
+<file path="mlruns/999480071915476583/af628dfdd5f54978be20378906ddf12b/meta.yaml">
+artifact_uri: file:///Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/mlruns/999480071915476583/af628dfdd5f54978be20378906ddf12b/artifacts
+end_time: 1766423436094
+entry_point_name: ''
+experiment_id: '999480071915476583'
+lifecycle_stage: active
+run_id: af628dfdd5f54978be20378906ddf12b
+run_name: risk-logreg
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1766423436083
+status: 3
+tags: []
+user_id: wholesway
+</file>
+
+<file path="mlruns/999480071915476583/meta.yaml">
+artifact_location: file:///Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/mlruns/999480071915476583
+creation_time: 1766423435732
+experiment_id: '999480071915476583'
+last_update_time: 1766423435732
+lifecycle_stage: active
+name: cashsim-risk
 </file>
 
 <file path="scripts/__init__.py">
@@ -2255,250 +3271,6 @@ if __name__ == "__main__":
 
 </file>
 
-<file path="src/cashsim/api/v1/routes.py">
-from __future__ import annotations
-
-from io import StringIO
-from typing import Any
-
-import pandas as pd
-from fastapi import APIRouter, HTTPException
-
-from cashsim.compare import build_compare_payload, series_diff
-from cashsim.io.exporters import EVENT_COLUMNS, metrics_to_dict, normalize_series_for_export
-from cashsim.sim.core import simulate_month
-
-from .schemas import (
-    CompareRequest,
-    CompareResponse,
-    ExportRequest,
-    ExportResponse,
-    SimMetricsWire,
-    SimulateRequest,
-    SimulateResponse,
-)
-
-router = APIRouter()
-
-
-def _records_from_df(df: pd.DataFrame) -> list[dict[str, Any]]:
-    records = df.to_dict(orient="records")
-    return [{str(k): v for k, v in record.items()} for record in records]
-
-
-def _series_records_raw(df: pd.DataFrame) -> list[dict[str, Any]]:
-    """Match CLI `cashsim simulate`: engine raw series records."""
-    return _records_from_df(df)
-
-
-def _series_records_export(df: pd.DataFrame) -> list[dict[str, Any]]:
-    """Match CLI `cashsim export --series-format json`: normalized, stable records."""
-    out = normalize_series_for_export(df)
-    return _records_from_df(out)
-
-
-def _series_csv_export(df: pd.DataFrame) -> str:
-    """Match CLI `cashsim export --series-format csv`: normalized, stable CSV."""
-    out = normalize_series_for_export(df)
-    buf = StringIO()
-
-    # lineterminator avoids Windows-style CRLF surprises in tests
-    out.to_csv(buf, index=False, lineterminator="\n", float_format="%.2f")
-    return buf.getvalue()
-
-
-def _events_csv_export(df: pd.DataFrame) -> str:
-    """Flatten per-day nested event lists into a single CSV string."""
-
-    rows: list[dict[str, object]] = []
-
-    if "date" not in df.columns:
-        raise ValueError("series df missing 'date' column")
-
-    for _, r in df.iterrows():
-        day = r["date"]
-        for col in EVENT_COLUMNS:
-            if col not in df.columns:
-                continue
-            events = r[col] or []
-            for ev in events:
-                if isinstance(ev, dict):
-                    row = {"date": day, "kind": col}
-                    row.update(ev)
-                    rows.append(row)
-                else:
-                    rows.append({"date": day, "kind": col, "raw": ev})
-
-    out = pd.DataFrame.from_records(rows)
-    if len(out) == 0:
-        out = pd.DataFrame(columns=["date", "kind"])
-
-    # Stable date serialization
-    if "date" in out.columns:
-        out["date"] = pd.to_datetime(out["date"]).dt.date.astype(str)
-
-    buf = StringIO()
-    out.to_csv(buf, index=False, lineterminator="\n")
-    return buf.getvalue()
-
-
-@router.post("/simulate", response_model=SimulateResponse)
-def simulate(req: SimulateRequest) -> SimulateResponse:
-    try:
-        df, metrics = simulate_month(req.dials, start=req.start, days=req.days)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-
-    return SimulateResponse(
-        metrics=SimMetricsWire.model_validate(metrics_to_dict(metrics)),
-        series=_series_records_raw(df),
-    )
-
-
-@router.post("/compare", response_model=CompareResponse)
-def compare(req: CompareRequest) -> CompareResponse:
-    try:
-        df_a, m_a = simulate_month(req.a, start=req.start, days=req.days)
-        df_b, m_b = simulate_month(req.b, start=req.start, days=req.days)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-
-    payload = build_compare_payload(
-        metrics_a=m_a,
-        metrics_b=m_b,
-        df_a=df_a,
-        df_b=df_b,
-        start=req.start.isoformat(),
-        days=req.days,
-        threshold=req.threshold,
-    )
-
-    # API keeps series_diff optional
-    if req.series:
-        cols = payload.get("meta", {}).get("series_columns", [])
-        diff = series_diff(df_a, df_b, columns=list(cols))
-        payload["series_diff"] = _records_from_df(diff)
-    else:
-        payload["series_diff"] = None
-
-    return CompareResponse(**payload)
-
-
-@router.post("/export", response_model=ExportResponse)
-def export(req: ExportRequest) -> ExportResponse:
-    try:
-        df, metrics = simulate_month(req.dials, start=req.start, days=req.days)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-
-    metrics_wire = SimMetricsWire.model_validate(metrics_to_dict(metrics))
-    meta = {
-        "start": req.start.isoformat(),
-        "days": req.days,
-        "series_format": req.series_format,
-        "include_events": req.include_events,
-    }
-
-    payload: dict[str, Any] = {"metrics": metrics_wire, "meta": meta}
-
-    if req.series_format == "csv":
-        payload["series_csv"] = _series_csv_export(df)
-    else:
-        payload["series_json"] = _series_records_export(df)
-
-    if req.include_events:
-        payload["events_csv"] = _events_csv_export(df)
-
-    return ExportResponse(**payload)
-</file>
-
-<file path="src/cashsim/api/v1/schemas.py">
-from __future__ import annotations
-
-from datetime import date
-from typing import Any, Literal
-
-from pydantic import BaseModel, ConfigDict, Field
-
-from cashsim.models import Dials
-
-
-class SimulateRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    dials: Dials
-    start: date = Field(..., description="Start date (YYYY-MM-DD)")
-    days: int = Field(31, ge=1, le=366)
-
-
-class SimMetricsWire(BaseModel):
-    """Wire-safe metrics (date fields are ISO strings or null)."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    min_balance: float
-    min_balance_date: str | None
-    first_negative_date: str | None
-    total_upcoming_bills: float
-    friend_ask_needed: float
-    friend_ask_latest_date: str | None
-    cushion_breach_date: str | None
-    accrued_interest_estimate: float
-
-
-class SimulateResponse(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    metrics: SimMetricsWire
-    series: list[dict[str, Any]]
-
-
-class CompareRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    a: Dials
-    b: Dials
-    start: date
-    days: int = Field(31, ge=1, le=366)
-    series: bool = False
-    threshold: float = Field(0.01, ge=0)
-
-
-class CompareResponse(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    metrics: dict[str, Any]
-    timeline: dict[str, Any]
-    category_totals: dict[str, Any]
-    series_summary: dict[str, Any]
-    meta: dict[str, Any]
-    series_diff: list[dict[str, Any]] | None = None
-
-
-class ExportRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    dials: Dials
-    start: date
-    days: int = Field(31, ge=1, le=366)
-    series_format: Literal["csv", "json"] = "csv"
-    include_events: bool = False
-
-
-class ExportResponse(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    metrics: SimMetricsWire
-    meta: dict[str, Any]
-
-    # Exactly one of these should be present based on series_format:
-    series_csv: str | None = None
-    series_json: list[dict[str, Any]] | None = None
-
-    # Present only if include_events=true
-    events_csv: str | None = None
-</file>
-
 <file path="src/cashsim/api/__init__.py">
 from .app import app
 
@@ -2515,9 +3287,14 @@ from fastapi.responses import JSONResponse
 from cashsim.api.middleware import RequestIdMiddleware, TimingMiddleware
 from cashsim.api.settings import ApiSettings
 from cashsim.api.v1.routes import router as v1_router
+from cashsim.observability.logging import configure_logging
+from cashsim.observability.otel import configure_tracing, instrument_fastapi
+
 
 
 def create_app() -> FastAPI:
+    configure_logging()
+    configure_tracing(service_name="cashsim-api")
     settings = ApiSettings()
 
     app = FastAPI(
@@ -2533,6 +3310,8 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
     app.add_middleware(TimingMiddleware)
 
+    instrument_fastapi(app)
+    
     if settings.allow_cors:
         app.add_middleware(
             CORSMiddleware,
@@ -2902,6 +3681,466 @@ def export_input_tables(
     return out_dir
 </file>
 
+<file path="src/cashsim/ml/__init__.py">
+
+</file>
+
+<file path="src/cashsim/ml/evaluate.py">
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+import joblib
+import matplotlib.pyplot as plt
+import pandas as pd
+from sklearn.calibration import calibration_curve
+from sklearn.metrics import brier_score_loss, roc_auc_score
+
+from .features import FEATURE_COLUMNS
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Evaluate overdraft-risk model.")
+    ap.add_argument("--data", required=True, help="Input Parquet")
+    ap.add_argument("--model", required=True, help="Model joblib")
+    ap.add_argument("--outdir", required=True, help="Output directory")
+    args = ap.parse_args()
+
+    outdir = Path(args.outdir)
+    outdir.mkdir(parents=True, exist_ok=True)
+
+    df = pd.read_parquet(args.data)
+    X = df[FEATURE_COLUMNS]
+    y = df["label_overdraft"].astype(int)
+
+    pipe = joblib.load(args.model)
+    proba = pipe.predict_proba(X)[:, 1]
+
+    auc = float(roc_auc_score(y, proba)) if y.nunique() > 1 else float("nan")
+    brier = float(brier_score_loss(y, proba))
+
+    frac_pos, mean_pred = calibration_curve(y, proba, n_bins=10, strategy="quantile")
+
+    metrics = {
+        "auc": auc,
+        "brier": brier,
+        "calibration_bins": int(len(frac_pos)),
+        "calibration": [
+            {"bin": int(i), "mean_pred": float(mean_pred[i]), "frac_pos": float(frac_pos[i])}
+            for i in range(len(frac_pos))
+        ],
+    }
+
+    (outdir / "metrics.json").write_text(json.dumps(metrics, indent=2))
+
+    # calibration plot
+    plt.figure()
+    plt.plot([0, 1], [0, 1])
+    plt.plot(mean_pred, frac_pos)
+    plt.xlabel("Mean predicted probability")
+    plt.ylabel("Fraction of positives")
+    plt.title("Calibration curve")
+    plt.tight_layout()
+    plt.savefig(outdir / "calibration.png")
+
+
+if __name__ == "__main__":
+    main()
+</file>
+
+<file path="src/cashsim/ml/features.py">
+from __future__ import annotations
+
+from datetime import date, timedelta
+
+from cashsim.models import Dials
+
+FEATURE_COLUMNS: list[str] = [
+    "starting_balance",
+    "safety_cushion",
+    "weekday_earnings",
+    "total_monthly_bills",
+    "total_debt_balance",
+    "total_debt_minimum",
+    "oneoff_total_horizon",
+    "gas_pct",
+    "gas_fill_size",
+    "num_bills",
+    "num_debts",
+    "num_oneoffs",
+]
+
+
+def _min_payment(balance: float, *, min_pct: float, min_floor: float) -> float:
+    return float(max(min_floor, balance * min_pct))
+
+
+def featurize_dials(dials: Dials, *, start: date, horizon_days: int) -> dict[str, float]:
+    """Compute explainable, stable features from inputs.
+
+    Keep this logic aligned between training and serving.
+    """
+    end = start + timedelta(days=horizon_days)
+
+    total_monthly_bills = float(sum(b.amount for b in dials.bills))
+
+    cc_min = sum(
+        _min_payment(c.balance, min_pct=c.min_pct, min_floor=c.min_floor)
+        for c in dials.credit_cards
+    )
+    iou_min = sum(
+        _min_payment(i.balance, min_pct=i.min_pct, min_floor=i.min_floor) for i in dials.ious
+    )
+
+    total_debt_balance = float(
+        sum(c.balance for c in dials.credit_cards) + sum(i.balance for i in dials.ious)
+    )
+    total_debt_minimum = float(cc_min + iou_min)
+
+    oneoff_total = float(sum(o.amount for o in dials.oneoffs if start <= o.due_date < end))
+
+    num_bills = float(len(dials.bills))
+    num_debts = float(len(dials.credit_cards) + len(dials.ious))
+    num_oneoffs = float(len(dials.oneoffs))
+
+    feats: dict[str, float] = {
+        "starting_balance": float(dials.current_cash),
+        "safety_cushion": float(dials.safety_cushion),
+        "weekday_earnings": float(dials.weekday_earnings),
+        "total_monthly_bills": total_monthly_bills,
+        "total_debt_balance": total_debt_balance,
+        "total_debt_minimum": total_debt_minimum,
+        "oneoff_total_horizon": oneoff_total,
+        "gas_pct": float(dials.gas_pct),
+        "gas_fill_size": float(dials.gas_fill_size),
+        "num_bills": num_bills,
+        "num_debts": num_debts,
+        "num_oneoffs": num_oneoffs,
+    }
+
+    # Defensive: always return all columns in stable order
+    return {k: float(feats.get(k, 0.0)) for k in FEATURE_COLUMNS}
+</file>
+
+<file path="src/cashsim/ml/init.py">
+"""ML utilities and pipelines for CashSim."""
+</file>
+
+<file path="src/cashsim/ml/synth.py">
+from __future__ import annotations
+
+import argparse
+import json
+import random
+from datetime import date, datetime, timedelta
+from pathlib import Path
+
+import pandas as pd
+
+from cashsim.models import IOU, Bill, CreditCard, Dials, OneOff
+from cashsim.sim.core import simulate_month
+
+from .features import FEATURE_COLUMNS, featurize_dials
+
+
+def _parse_date(s: str) -> date:
+    return date.fromisoformat(s)
+
+
+def _rng_float(rng: random.Random, a: float, b: float) -> float:
+    return float(round(rng.uniform(a, b), 2))
+
+
+def _mk_dials(rng: random.Random, *, start: date, horizon_days: int) -> Dials:
+    # Core dials
+    current_cash = _rng_float(rng, 0, 2500)
+    safety_cushion = _rng_float(rng, 0, 1500)
+    weekday_earnings = _rng_float(rng, 0, 300)
+    gas_pct = float(round(rng.uniform(0.05, 0.25), 3))
+    gas_fill_size = _rng_float(rng, 10, 70)
+
+    # Bills
+    bills: list[Bill] = []
+    for i in range(rng.randint(0, 5)):
+        bills.append(
+            Bill(
+                name=f"bill_{i}",
+                amount=_rng_float(rng, 20, 900),
+                usual_day=rng.randint(1, 28),
+            )
+        )
+
+    # Credit cards
+    ccs: list[CreditCard] = []
+    for i in range(rng.randint(0, 3)):
+        ccs.append(
+            CreditCard(
+                name=f"cc_{i}",
+                apr=float(round(rng.uniform(0.0, 0.35), 4)),
+                balance=_rng_float(rng, 0, 8000),
+                due_day=rng.randint(1, 28),
+                min_pct=float(round(rng.uniform(0.01, 0.05), 4)),
+                min_floor=_rng_float(rng, 15, 50),
+                statement_day=None,
+            )
+        )
+
+    # IOUs
+    ious: list[IOU] = []
+    for i in range(rng.randint(0, 2)):
+        ious.append(
+            IOU(
+                name=f"iou_{i}",
+                balance=_rng_float(rng, 0, 4000),
+                apr=float(round(rng.uniform(0.0, 0.25), 4)),
+                due_day=rng.choice([None] + list(range(1, 29))),
+                min_pct=float(round(rng.uniform(0.0, 0.05), 4)),
+                min_floor=_rng_float(rng, 0, 40),
+            )
+        )
+
+    # One-offs due within horizon
+    oneoffs: list[OneOff] = []
+    for i in range(rng.randint(0, 4)):
+        dd = start + timedelta(days=rng.randint(0, max(1, horizon_days - 1)))
+        oneoffs.append(
+            OneOff(
+                name=f"oneoff_{i}",
+                due_date=dd,
+                amount=_rng_float(rng, 10, 1500),
+                priority=rng.randint(0, 3),
+                must_pay=True,
+            )
+        )
+
+    return Dials(
+        current_cash=current_cash,
+        safety_cushion=safety_cushion,
+        weekday_earnings=weekday_earnings,
+        gas_pct=gas_pct,
+        gas_fill_size=gas_fill_size,
+        bills=bills,
+        credit_cards=ccs,
+        ious=ious,
+        oneoffs=oneoffs,
+    )
+
+
+def generate(*, n: int, seed: int, start: date, horizon_days: int) -> pd.DataFrame:
+    rng = random.Random(seed)
+    rows: list[dict[str, float]] = []
+
+    for _ in range(n):
+        d = _mk_dials(rng, start=start, horizon_days=horizon_days)
+        df, _metrics = simulate_month(d, start=start, days=horizon_days)
+        # label: overdraft if any daily balance < 0
+        overdraft = bool((df["balance"] < 0).any())
+
+        feats = featurize_dials(d, start=start, horizon_days=horizon_days)
+        feats["label_overdraft"] = 1.0 if overdraft else 0.0
+
+        rows.append(feats)
+
+    out = pd.DataFrame(rows)
+    # stable column ordering
+    out = out[FEATURE_COLUMNS + ["label_overdraft"]]
+    return out
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Generate synthetic overdraft-risk training data.")
+    ap.add_argument("--out", required=True, help="Output Parquet path")
+    ap.add_argument("--meta", required=True, help="Output metadata JSON path")
+
+    # pull defaults from params.yaml via environment-free convention:
+    # - for DVC reproduction, params changes invalidate stages anyway
+    ap.add_argument("--n", type=int, default=None)
+    ap.add_argument("--seed", type=int, default=None)
+    ap.add_argument("--start", type=str, default=None)
+    ap.add_argument("--horizon-days", type=int, default=None)
+
+    args = ap.parse_args()
+
+    # Read params.yaml if present
+    import yaml
+
+    params = yaml.safe_load(Path("params.yaml").read_text()) if Path("params.yaml").exists() else {}
+    rp = params.get("risk", {})
+
+    n = int(args.n if args.n is not None else rp.get("n_samples", 5000))
+    seed = int(args.seed if args.seed is not None else rp.get("seed", 1337))
+    start = _parse_date(
+        args.start if args.start is not None else rp.get("start_date", "2025-01-01")
+    )
+    horizon_days = int(
+        args.horizon_days if args.horizon_days is not None else rp.get("horizon_days", 30)
+    )
+
+    out_path = Path(args.out)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    meta_path = Path(args.meta)
+    meta_path.parent.mkdir(parents=True, exist_ok=True)
+
+    df = generate(n=n, seed=seed, start=start, horizon_days=horizon_days)
+    df.to_parquet(out_path, index=False)
+
+    meta = {
+        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "n": n,
+        "seed": seed,
+        "start": start.isoformat(),
+        "horizon_days": horizon_days,
+        "features": FEATURE_COLUMNS,
+        "label": "label_overdraft",
+    }
+    meta_path.write_text(json.dumps(meta, indent=2))
+
+
+if __name__ == "__main__":
+    main()
+</file>
+
+<file path="src/cashsim/ml/train.py">
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+from datetime import datetime
+from pathlib import Path
+
+import joblib
+import mlflow
+import pandas as pd
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import brier_score_loss, roc_auc_score
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+from .features import FEATURE_COLUMNS
+
+
+def _git_sha() -> str:
+    try:
+        return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+    except Exception:
+        return "unknown"
+
+
+def _build_model(model_type: str, *, params: dict) -> Pipeline:
+    if model_type == "logreg":
+        clf = LogisticRegression(
+            C=float(params.get("C", 1.0)),
+            max_iter=int(params.get("max_iter", 2000)),
+            solver="lbfgs",
+            n_jobs=None,
+        )
+        return Pipeline(
+            steps=[
+                ("scaler", StandardScaler()),
+                ("model", clf),
+            ]
+        )
+
+    if model_type == "gbdt":
+        clf = GradientBoostingClassifier(
+            n_estimators=int(params.get("n_estimators", 300)),
+            max_depth=int(params.get("max_depth", 3)),
+            learning_rate=float(params.get("learning_rate", 0.05)),
+            random_state=0,
+        )
+        # keep scaler for stable contribution reporting interface even though not strictly needed
+        return Pipeline(
+            steps=[
+                ("scaler", StandardScaler()),
+                ("model", clf),
+            ]
+        )
+
+    raise ValueError(f"Unknown model_type={model_type!r}")
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Train overdraft-risk model.")
+    ap.add_argument("--data", required=True, help="Input Parquet")
+    ap.add_argument("--model", required=True, help="Output model joblib")
+    ap.add_argument("--feature-names", required=True, help="Output feature_names.json")
+    ap.add_argument("--meta", required=True, help="Output training_meta.json")
+    args = ap.parse_args()
+
+    import yaml
+
+    params = yaml.safe_load(Path("params.yaml").read_text()) if Path("params.yaml").exists() else {}
+    rp = params.get("risk", {})
+
+    seed = int(rp.get("seed", 1337))
+    test_size = float(rp.get("test_size", 0.2))
+    model_type = str(rp.get("model_type", "logreg"))
+    model_params = dict(rp.get(model_type, {}))
+
+    df = pd.read_parquet(args.data)
+    X = df[FEATURE_COLUMNS]
+    y = df["label_overdraft"].astype(int)
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X,
+        y,
+        test_size=test_size,
+        random_state=seed,
+        stratify=y if y.nunique() > 1 else None,
+    )
+
+    # Train outside the MLflow run context, so we don't end up with empty/partial runs.
+    pipe = _build_model(model_type, params=model_params)
+    pipe.fit(X_train, y_train)
+
+    proba = pipe.predict_proba(X_test)[:, 1]
+    auc = float(roc_auc_score(y_test, proba)) if y_test.nunique() > 1 else float("nan")
+    brier = float(brier_score_loss(y_test, proba))
+
+    model_path = Path(args.model)
+    model_path.parent.mkdir(parents=True, exist_ok=True)
+    joblib.dump(pipe, model_path)
+
+    Path(args.feature_names).write_text(json.dumps(FEATURE_COLUMNS, indent=2))
+
+    meta = {
+        "trained_at": datetime.utcnow().isoformat() + "Z",
+        "git_sha": _git_sha(),
+        "data": str(Path(args.data)),
+        "n_rows": int(len(df)),
+        "model_type": model_type,
+        "model_params": model_params,
+        "seed": seed,
+        "test_size": test_size,
+        "metrics": {"auc": auc, "brier": brier},
+    }
+    Path(args.meta).parent.mkdir(parents=True, exist_ok=True)
+    Path(args.meta).write_text(json.dumps(meta, indent=2))
+
+    # MLflow logging
+    mlflow.set_experiment("cashsim-risk")
+
+    with mlflow.start_run(run_name=f"risk-{model_type}"):
+        mlflow.log_params(
+            {"model_type": model_type, **{f"{model_type}.{k}": v for k, v in model_params.items()}}
+        )
+        mlflow.log_params({"seed": seed, "test_size": test_size})
+        mlflow.log_metrics({"auc": auc, "brier": brier})
+        mlflow.log_artifact(str(Path(args.meta)))
+        mlflow.log_artifact(str(Path(args.feature_names)))
+        mlflow.log_artifact(str(model_path))
+
+
+if __name__ == "__main__":
+    main()
+</file>
+
 <file path="src/cashsim/planning/__init__.py">
 
 </file>
@@ -2997,39 +4236,105 @@ def last_statement_close_date(today: date, due_day: int, statement_day: int | No
     return ns
 </file>
 
-<file path="src/cashsim/batch.py">
+<file path="src/cashsim/risk.py">
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
+from typing import Protocol, cast
 
+import joblib
 import pandas as pd
 
-from cashsim.io.config_io import load_config
-from cashsim.sim.core import simulate_month
-from cashsim.sim.types import SimMetrics
+from cashsim.ml.features import FEATURE_COLUMNS, featurize_dials
+from cashsim.models import Dials
 
 
 @dataclass(frozen=True)
-class RunResult:
-    config_path: Path
-    start: date
-    days: int
-    df: pd.DataFrame
-    metrics: SimMetrics
+class RiskDriver:
+    feature: str
+    contribution: float  # log-odds contribution
+    direction: str  # "increases" | "decreases"
+    value: float
 
 
-def run_from_config(*, config: Path, start: date, days: int) -> RunResult:
-    dials = load_config(config)
-    df, metrics = simulate_month(dials, start=start, days=days)
-    return RunResult(
-        config_path=Path(config).resolve(),
-        start=start,
-        days=days,
-        df=df,
-        metrics=metrics,
-    )
+@dataclass(frozen=True)
+class RiskResult:
+    probability: float
+    horizon_days: int
+    drivers: list[RiskDriver]
+
+
+class _Pipeline(Protocol):
+    def predict_proba(self, X: pd.DataFrame) -> Sequence[Sequence[float]]: ...
+
+    @property
+    def named_steps(self) -> Mapping[str, object]: ...
+
+
+class _Scaler(Protocol):
+    def transform(self, X: pd.DataFrame) -> Sequence[Sequence[float]]: ...
+
+
+class _LinearModel(Protocol):
+    coef_: Sequence[Sequence[float]]
+
+
+def load_model(model_path: Path) -> _Pipeline:
+    if not model_path.exists():
+        raise FileNotFoundError(
+            f"Risk model not found at {model_path}. "
+            f"Run: dvc repro (or at least the risk_train stage) to produce it."
+        )
+    return joblib.load(model_path)
+
+
+def predict_overdraft_risk(
+    dials: Dials,
+    *,
+    start: date,
+    horizon_days: int = 30,
+    model_path: Path = Path("artifacts/risk/model.joblib"),
+    top_k: int = 5,
+) -> RiskResult:
+    pipe = load_model(model_path)
+
+    feats = featurize_dials(dials, start=start, horizon_days=horizon_days)
+    X = pd.DataFrame([feats])[FEATURE_COLUMNS]
+
+    proba = pipe.predict_proba(X)
+    p = float(proba[0][1])
+
+    # Explainability: for logistic regression, approximate top drivers via coef * standardized value.
+    drivers: list[RiskDriver] = []
+    try:
+        scaler = pipe.named_steps.get("scaler")
+        model = pipe.named_steps.get("model")
+        if hasattr(model, "coef_") and scaler is not None:
+            scaler = cast(_Scaler, scaler)
+            model = cast(_LinearModel, model)
+            x_scaled = scaler.transform(X)
+            x_scaled_row = x_scaled[0]
+            coefs = model.coef_[0]
+
+            pairs = []
+            for i, feat in enumerate(FEATURE_COLUMNS):
+                c = float(x_scaled_row[i]) * float(coefs[i])
+                pairs.append((feat, c, float(X.iloc[0][feat])))
+
+            pairs.sort(key=lambda t: abs(t[1]), reverse=True)
+            for feat, c, val in pairs[: max(1, top_k)]:
+                direction = "increases" if c > 0 else "decreases"
+                drivers.append(
+                    RiskDriver(feature=feat, contribution=c, direction=direction, value=val)
+                )
+    except Exception:
+        # If explainability fails for any reason, we still return the probability.
+        drivers = []
+
+    return RiskResult(probability=p, horizon_days=horizon_days, drivers=drivers)
 </file>
 
 <file path="tests/contract/test_api_compare.py">
@@ -3127,6 +4432,60 @@ def test_export_json_has_series_json_field() -> None:
     body = r.json()
     assert isinstance(body.get("series_json"), list)
     assert body.get("series_csv") is None
+</file>
+
+<file path="tests/contract/test_api_risk.py">
+from __future__ import annotations
+
+from fastapi.testclient import TestClient
+
+from cashsim.api.app import app
+
+
+def test_risk_schema_contract() -> None:
+    client = TestClient(app)
+
+    payload = {
+        "start": "2025-01-01",
+        "horizon_days": 30,
+        "top_k": 3,
+        "dials": {
+            "current_cash": 300,
+            "safety_cushion": 150,
+            "weekday_earnings": 120,
+            "gas_pct": 0.1,
+            "gas_fill_size": 25,
+            "bills": [],
+            "credit_cards": [],
+            "ious": [],
+            "oneoffs": [],
+            "invest": {
+                "enable": True,
+                "hysa_apy": 0.045,
+                "expected_market_return": 0.07,
+                "use_dca": True,
+                "roth_target": 0.0,
+                "trad_target": 0.0,
+                "hysa_target": 0.0,
+                "robinhood_target": 0.0,
+                "ira_year_limit": 7000.0,
+                "roth_ok_today": True,
+            },
+            "interest_mode": "statement_adb",
+            "extra_strategy": "avalanche",
+            "blackouts": [],
+        },
+    }
+
+    r = client.post("/v1/risk", json=payload)
+    assert r.status_code in (200, 500)  # 500 acceptable if model file missing
+
+    if r.status_code == 200:
+        body = r.json()
+        assert set(body.keys()) == {"probability", "horizon_days", "drivers"}
+        assert isinstance(body["probability"], (float, int))
+        assert body["horizon_days"] == 30
+        assert isinstance(body["drivers"], list)
 </file>
 
 <file path="tests/contract/test_api_simulate.py">
@@ -3957,6 +5316,61 @@ def test_cli_export_refuses_existing_output_without_overwrite(tmp_path: Path) ->
     assert "Traceback" not in result2.output
 </file>
 
+<file path="tests/integration/test_risk_monotonic.py">
+from __future__ import annotations
+
+from datetime import date
+from pathlib import Path
+
+from cashsim.models import Dials
+from cashsim.risk import predict_overdraft_risk
+
+
+def test_more_cash_should_not_increase_risk(tmp_path: Path) -> None:
+    # Skip if model isn't present locally
+    model_path = Path("artifacts/risk/model.joblib")
+    if not model_path.exists():
+        return
+
+    base = Dials(
+        current_cash=200,
+        safety_cushion=150,
+        weekday_earnings=80,
+        gas_pct=0.1,
+        gas_fill_size=25,
+        bills=[],
+        credit_cards=[],
+        ious=[],
+        oneoffs=[],
+    )
+    richer = base.model_copy(update={"current_cash": 400})
+
+    p1 = predict_overdraft_risk(
+        base, start=date(2025, 1, 1), horizon_days=30, model_path=model_path
+    ).probability
+    p2 = predict_overdraft_risk(
+        richer, start=date(2025, 1, 1), horizon_days=30, model_path=model_path
+    ).probability
+
+    assert p2 <= p1 + 0.02
+</file>
+
+<file path="tests/integration/test_risk_pipeline_smoke.py">
+from __future__ import annotations
+
+from pathlib import Path
+
+import pandas as pd
+
+from cashsim.ml.synth import generate
+
+
+def test_risk_pipeline_smoke(tmp_path: Path) -> None:
+    df = generate(n=200, seed=123, start=pd.Timestamp("2025-01-01").date(), horizon_days=30)
+    assert "label_overdraft" in df.columns
+    assert len(df) == 200
+</file>
+
 <file path="tests/io/test_csv_roundtrip.py">
 from __future__ import annotations
 
@@ -3978,6 +5392,24 @@ def test_export_import_roundtrip(tmp_path: Path) -> None:
 
     # Pydantic models support structural comparison by dump
     assert dials.model_dump(mode="json") == d2.model_dump(mode="json")
+</file>
+
+<file path="tests/conftest.py">
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+# Ensure repo root is importable so tests can reach scripts/ utilities.
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+</file>
+
+<file path=".dvcignore">
+# Add patterns of files dvc should ignore, which could improve
+# the performance. Learn more at
+# https://dvc.org/doc/user-guide/dvcignore
 </file>
 
 <file path=".monkey-mods.txt">
@@ -4195,8 +5627,189 @@ cashsim.utils.money
 }
 </file>
 
+<file path="dvc.lock">
+schema: '2.0'
+stages:
+  risk_synth:
+    cmd: "python -m cashsim.ml.synth --out data/synth/risk.parquet --meta artifacts/risk/synth_meta.json\n"
+    deps:
+    - path: src/cashsim/ml/features.py
+      hash: md5
+      md5: b192f536ae4b7413815e48f250fcd586
+      size: 2284
+    - path: src/cashsim/ml/synth.py
+      hash: md5
+      md5: b0954536e5d93273fbac048da5e3c412
+      size: 5420
+    - path: src/cashsim/models.py
+      hash: md5
+      md5: ca3080fc090889cffb70e255842e7187
+      size: 2712
+    - path: src/cashsim/sim/core.py
+      hash: md5
+      md5: 2597260c6d4be449081b7f58cdfe8b28
+      size: 11967
+    params:
+      params.yaml:
+        risk.horizon_days: 30
+        risk.n_samples: 1000
+        risk.seed: 1337
+        risk.start_date: '2025-01-01'
+    outs:
+    - path: artifacts/risk/synth_meta.json
+      hash: md5
+      md5: 32bdbeba9ab1ab0ad4aaf338fbe829bc
+      size: 443
+    - path: data/synth/risk.parquet
+      hash: md5
+      md5: ffa64b1688a1bb02a9596a11949d6b18
+      size: 62734
+  risk_train:
+    cmd: "python -m cashsim.ml.train --data data/synth/risk.parquet --model artifacts/risk/model.joblib
+      --feature-names artifacts/risk/feature_names.json --meta artifacts/risk/training_meta.json\n"
+    deps:
+    - path: data/synth/risk.parquet
+      hash: md5
+      md5: ffa64b1688a1bb02a9596a11949d6b18
+      size: 62734
+    - path: src/cashsim/ml/features.py
+      hash: md5
+      md5: b192f536ae4b7413815e48f250fcd586
+      size: 2284
+    - path: src/cashsim/ml/train.py
+      hash: md5
+      md5: ed0b838ff1ed651ccd6c279e6a3418fa
+      size: 4458
+    params:
+      params.yaml:
+        risk.gbdt:
+          n_estimators: 300
+          max_depth: 3
+          learning_rate: 0.05
+        risk.logreg:
+          C: 1.0
+          max_iter: 2000
+        risk.model_type: logreg
+        risk.seed: 1337
+        risk.test_size: 0.2
+    outs:
+    - path: artifacts/risk/feature_names.json
+      hash: md5
+      md5: e80a73e3d422a63c6e30a3e5c66881e8
+      size: 244
+    - path: artifacts/risk/model.joblib
+      hash: md5
+      md5: a4219906db0afb0e54d4fa1f54a2030e
+      size: 2161
+    - path: artifacts/risk/training_meta.json
+      hash: md5
+      md5: 4311603f85bc67392a27b85840bdd62c
+      size: 367
+  risk_eval:
+    cmd: "python -m cashsim.ml.evaluate --data data/synth/risk.parquet --model artifacts/risk/model.joblib
+      --outdir artifacts/risk/eval\n"
+    deps:
+    - path: artifacts/risk/model.joblib
+      hash: md5
+      md5: a4219906db0afb0e54d4fa1f54a2030e
+      size: 2161
+    - path: data/synth/risk.parquet
+      hash: md5
+      md5: ffa64b1688a1bb02a9596a11949d6b18
+      size: 62734
+    - path: src/cashsim/ml/evaluate.py
+      hash: md5
+      md5: e3fbe910c38bbfad7aee3c30e7626e52
+      size: 1803
+    - path: src/cashsim/ml/features.py
+      hash: md5
+      md5: b192f536ae4b7413815e48f250fcd586
+      size: 2284
+    outs:
+    - path: artifacts/risk/eval/metrics.json
+      hash: md5
+      md5: 06d7a0af12eea1300e6878d487702efc
+      size: 1027
+</file>
+
+<file path="dvc.yaml">
+stages:
+  risk_synth:
+    cmd: >
+      python -m cashsim.ml.synth
+      --out data/synth/risk.parquet
+      --meta artifacts/risk/synth_meta.json
+    deps:
+      - src/cashsim/ml/synth.py
+      - src/cashsim/ml/features.py
+      - src/cashsim/sim/core.py
+      - src/cashsim/models.py
+    params:
+      - risk.seed
+      - risk.n_samples
+      - risk.horizon_days
+      - risk.start_date
+    outs:
+      - data/synth/risk.parquet
+      - artifacts/risk/synth_meta.json
+
+  risk_train:
+    cmd: >
+      python -m cashsim.ml.train
+      --data data/synth/risk.parquet
+      --model artifacts/risk/model.joblib
+      --feature-names artifacts/risk/feature_names.json
+      --meta artifacts/risk/training_meta.json
+    deps:
+      - src/cashsim/ml/train.py
+      - src/cashsim/ml/features.py
+      - data/synth/risk.parquet
+    params:
+      - risk.seed
+      - risk.test_size
+      - risk.model_type
+      - risk.logreg
+      - risk.gbdt
+    outs:
+      - artifacts/risk/model.joblib
+      - artifacts/risk/feature_names.json
+      - artifacts/risk/training_meta.json
+
+  risk_eval:
+    cmd: >
+      python -m cashsim.ml.evaluate
+      --data data/synth/risk.parquet
+      --model artifacts/risk/model.joblib
+      --outdir artifacts/risk/eval
+    deps:
+      - src/cashsim/ml/evaluate.py
+      - src/cashsim/ml/features.py
+      - data/synth/risk.parquet
+      - artifacts/risk/model.joblib
+    metrics:
+      - artifacts/risk/eval/metrics.json:
+          cache: false
+</file>
+
 <file path="example.json">
 
+</file>
+
+<file path="params.yaml">
+risk:
+  seed: 1337
+  n_samples: 1000
+  horizon_days: 30
+  start_date: '2025-01-01'
+  test_size: 0.2
+  model_type: logreg
+  logreg:
+    C: 1.0
+    max_iter: 2000
+  gbdt:
+    n_estimators: 300
+    max_depth: 3
+    learning_rate: 0.05
 </file>
 
 <file path="patch.diff">
@@ -4985,6 +6598,332 @@ def break_even_grid(dials: Dials, candidates: Iterable[float], *, days: int = 31
     return pd.DataFrame([r.__dict__ for r in rows]).sort_values("weekday_earnings")
 </file>
 
+<file path="src/cashsim/api/v1/routes.py">
+from __future__ import annotations
+
+import logging
+import time
+from io import StringIO
+from typing import Any
+
+import pandas as pd
+from fastapi import APIRouter, HTTPException
+from opentelemetry import trace
+
+from cashsim.compare import build_compare_payload, series_diff
+from cashsim.io.exporters import EVENT_COLUMNS, metrics_to_dict, normalize_series_for_export
+from cashsim.risk import predict_overdraft_risk
+from cashsim.sim.core import simulate_month
+
+from .schemas import (
+    CompareRequest,
+    CompareResponse,
+    ExportRequest,
+    ExportResponse,
+    RiskDriverOut,
+    RiskRequest,
+    RiskResponse,
+    SimMetricsWire,
+    SimulateRequest,
+    SimulateResponse,
+)
+
+logger = logging.getLogger(__name__)
+tracer = trace.get_tracer("cashsim.api")
+router = APIRouter()
+
+
+def _records_from_df(df: pd.DataFrame) -> list[dict[str, Any]]:
+    records = df.to_dict(orient="records")
+    return [{str(k): v for k, v in record.items()} for record in records]
+
+
+def _series_records_raw(df: pd.DataFrame) -> list[dict[str, Any]]:
+    """Match CLI `cashsim simulate`: engine raw series records."""
+    return _records_from_df(df)
+
+
+def _series_records_export(df: pd.DataFrame) -> list[dict[str, Any]]:
+    """Match CLI `cashsim export --series-format json`: normalized, stable records."""
+    out = normalize_series_for_export(df)
+    return _records_from_df(out)
+
+
+def _series_csv_export(df: pd.DataFrame) -> str:
+    """Match CLI `cashsim export --series-format csv`: normalized, stable CSV."""
+    out = normalize_series_for_export(df)
+    buf = StringIO()
+
+    # lineterminator avoids Windows-style CRLF surprises in tests
+    out.to_csv(buf, index=False, lineterminator="\n", float_format="%.2f")
+    return buf.getvalue()
+
+
+def _events_csv_export(df: pd.DataFrame) -> str:
+    """Flatten per-day nested event lists into a single CSV string."""
+
+    rows: list[dict[str, object]] = []
+
+    if "date" not in df.columns:
+        raise ValueError("series df missing 'date' column")
+
+    for _, r in df.iterrows():
+        day = r["date"]
+        for col in EVENT_COLUMNS:
+            if col not in df.columns:
+                continue
+            events = r[col] or []
+            for ev in events:
+                if isinstance(ev, dict):
+                    row = {"date": day, "kind": col}
+                    row.update(ev)
+                    rows.append(row)
+                else:
+                    rows.append({"date": day, "kind": col, "raw": ev})
+
+    out = pd.DataFrame.from_records(rows)
+    if len(out) == 0:
+        out = pd.DataFrame(columns=["date", "kind"])
+
+    # Stable date serialization
+    if "date" in out.columns:
+        out["date"] = pd.to_datetime(out["date"]).dt.date.astype(str)
+
+    buf = StringIO()
+    out.to_csv(buf, index=False, lineterminator="\n")
+    return buf.getvalue()
+
+
+@router.post("/simulate", response_model=SimulateResponse)
+def simulate(req: SimulateRequest) -> SimulateResponse:
+    t0 = time.perf_counter()
+    logger.info(
+        "simulate_start",
+        extra={
+            "event": "simulate_start",
+            "days": req.days,
+            "start_date": str(req.start),
+            "current_cash": float(req.dials.current_cash),
+            "weekday_earnings": float(req.dials.weekday_earnings),
+        },
+    )
+
+    try:
+        with tracer.start_as_current_span("cashsim.simulate") as span:
+            span.set_attribute("cashsim.days", req.days)
+            span.set_attribute("cashsim.start_date", str(req.start))
+
+            df, metrics = simulate_month(req.dials, start=req.start, days=req.days)
+
+            span.set_attribute("cashsim.rows", int(len(df)))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    dt_ms = (time.perf_counter() - t0) * 1000
+    logger.info(
+        "simulate_end",
+        extra={
+            "event": "simulate_end",
+            "duration_ms": round(dt_ms, 2),
+            "rows": int(len(df)),
+        },
+    )
+
+    return SimulateResponse(
+        metrics=SimMetricsWire.model_validate(metrics_to_dict(metrics)),
+        series=_series_records_raw(df),
+    )
+
+
+@router.post("/risk", response_model=RiskResponse)
+def risk(req: RiskRequest) -> RiskResponse:
+    result = predict_overdraft_risk(
+        req.dials,
+        start=req.start,
+        horizon_days=req.horizon_days,
+        top_k=req.top_k,
+    )
+    return RiskResponse(
+        probability=result.probability,
+        horizon_days=result.horizon_days,
+        drivers=[
+            RiskDriverOut(
+                feature=d.feature,
+                contribution=d.contribution,
+                direction=d.direction,
+                value=d.value,
+            )
+            for d in result.drivers
+        ],
+    )
+
+
+@router.post("/compare", response_model=CompareResponse)
+def compare(req: CompareRequest) -> CompareResponse:
+    try:
+        df_a, m_a = simulate_month(req.a, start=req.start, days=req.days)
+        df_b, m_b = simulate_month(req.b, start=req.start, days=req.days)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    payload = build_compare_payload(
+        metrics_a=m_a,
+        metrics_b=m_b,
+        df_a=df_a,
+        df_b=df_b,
+        start=req.start.isoformat(),
+        days=req.days,
+        threshold=req.threshold,
+    )
+
+    # API keeps series_diff optional
+    if req.series:
+        cols = payload.get("meta", {}).get("series_columns", [])
+        diff = series_diff(df_a, df_b, columns=list(cols))
+        payload["series_diff"] = _records_from_df(diff)
+    else:
+        payload["series_diff"] = None
+
+    return CompareResponse(**payload)
+
+
+@router.post("/export", response_model=ExportResponse)
+def export(req: ExportRequest) -> ExportResponse:
+    try:
+        df, metrics = simulate_month(req.dials, start=req.start, days=req.days)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    metrics_wire = SimMetricsWire.model_validate(metrics_to_dict(metrics))
+    meta = {
+        "start": req.start.isoformat(),
+        "days": req.days,
+        "series_format": req.series_format,
+        "include_events": req.include_events,
+    }
+
+    payload: dict[str, Any] = {"metrics": metrics_wire, "meta": meta}
+
+    if req.series_format == "csv":
+        payload["series_csv"] = _series_csv_export(df)
+    else:
+        payload["series_json"] = _series_records_export(df)
+
+    if req.include_events:
+        payload["events_csv"] = _events_csv_export(df)
+
+    return ExportResponse(**payload)
+</file>
+
+<file path="src/cashsim/api/v1/schemas.py">
+from __future__ import annotations
+
+from datetime import date
+from typing import Any, Literal
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from cashsim.models import Dials
+
+
+class SimulateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    dials: Dials
+    start: date = Field(..., description="Start date (YYYY-MM-DD)")
+    days: int = Field(31, ge=1, le=366)
+
+
+class SimMetricsWire(BaseModel):
+    """Wire-safe metrics (date fields are ISO strings or null)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    min_balance: float
+    min_balance_date: str | None
+    first_negative_date: str | None
+    total_upcoming_bills: float
+    friend_ask_needed: float
+    friend_ask_latest_date: str | None
+    cushion_breach_date: str | None
+    accrued_interest_estimate: float
+
+
+class SimulateResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    metrics: SimMetricsWire
+    series: list[dict[str, Any]]
+
+
+class CompareRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    a: Dials
+    b: Dials
+    start: date
+    days: int = Field(31, ge=1, le=366)
+    series: bool = False
+    threshold: float = Field(0.01, ge=0)
+
+
+class CompareResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    metrics: dict[str, Any]
+    timeline: dict[str, Any]
+    category_totals: dict[str, Any]
+    series_summary: dict[str, Any]
+    meta: dict[str, Any]
+    series_diff: list[dict[str, Any]] | None = None
+
+
+class ExportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    dials: Dials
+    start: date
+    days: int = Field(31, ge=1, le=366)
+    series_format: Literal["csv", "json"] = "csv"
+    include_events: bool = False
+
+
+class ExportResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    metrics: SimMetricsWire
+    meta: dict[str, Any]
+
+    # Exactly one of these should be present based on series_format:
+    series_csv: str | None = None
+    series_json: list[dict[str, Any]] | None = None
+
+    # Present only if include_events=true
+    events_csv: str | None = None
+
+
+class RiskRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    dials: Dials
+    start: date
+    horizon_days: int = Field(30, ge=1, le=366)
+    top_k: int = Field(5, ge=0, le=20)
+
+
+class RiskDriverOut(BaseModel):
+    feature: str
+    contribution: float
+    direction: Literal["increases", "decreases"]
+    value: float
+
+
+class RiskResponse(BaseModel):
+    probability: float
+    horizon_days: int
+    drivers: list[RiskDriverOut]
+</file>
+
 <file path="src/cashsim/io/exporters.py">
 from __future__ import annotations
 
@@ -5393,6 +7332,44 @@ from .cli import main
 
 if __name__ == "__main__":
     main()
+</file>
+
+<file path="src/cashsim/batch.py">
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date
+from pathlib import Path
+
+import pandas as pd
+
+from cashsim.io.config_io import load_config
+from cashsim.models import Dials
+from cashsim.sim.core import simulate_month
+from cashsim.sim.types import SimMetrics
+
+
+@dataclass(frozen=True)
+class RunResult:
+    config_path: Path
+    dials: Dials
+    start: date
+    days: int
+    df: pd.DataFrame
+    metrics: SimMetrics
+
+
+def run_from_config(*, config: Path, start: date, days: int) -> RunResult:
+    dials = load_config(config)
+    df, metrics = simulate_month(dials, start=start, days=days)
+    return RunResult(
+        config_path=Path(config).resolve(),
+        dials=dials,
+        start=start,
+        days=days,
+        df=df,
+        metrics=metrics,
+    )
 </file>
 
 <file path="src/cashsim/compare.py">
@@ -5804,31 +7781,6 @@ def test_adb_identity_property(daily: list[Decimal], apr: Decimal) -> None:
     lhs = quantize_cents(sum((D(b) * daily_rate for b in daily), D("0")))
     rhs = _adb_interest(daily, apr)
     assert lhs == rhs
-</file>
-
-<file path=".repomixignore">
-# Add patterns to ignore here, one per line
-# Example:
-# *.log
-# tmp/
-.streamlit/secrets.toml
-monkeytype.sqlite3
-*.svg
-artifacts/data_docs/
-</file>
-
-<file path="requirements.txt">
--e .
-
-# requirements.txt (third-party deps)
-pydantic>=2.10,<3
-pandas>=2.2.3,<3.0
-python-dateutil>=2.9.0.post0
-streamlit>=1.49,<2.0
-pyarrow>=21,<22
-gspread>=6,<7
-google-auth>=2.0
-gspread-dataframe>=2.0.0
 </file>
 
 <file path="src/cashsim/ui/components.py">
@@ -6301,6 +8253,17 @@ repos:
     pass_filenames: false
 </file>
 
+<file path=".repomixignore">
+# Add patterns to ignore here, one per line
+# Example:
+# *.log
+# tmp/
+.streamlit/secrets.toml
+monkeytype.sqlite3
+*.svg
+artifacts/data_docs/
+</file>
+
 <file path="README.md">
 # CashSim
 
@@ -6379,6 +8342,21 @@ Bug reports & PRs welcome. See **CONTRIBUTING.md**.
 ## 📝 License
 
 MIT — see **LICENSE**.
+</file>
+
+<file path="requirements.txt">
+-e .
+
+# requirements.txt (third-party deps)
+pydantic>=2.10,<3
+pandas>=2.2.3,<3.0
+python-dateutil>=2.9.0.post0
+streamlit>=1.49,<2.0
+pyarrow>=22,<23; python_version>="3.13"
+pyarrow>=12,<20; python_version<"3.13"
+gspread>=6,<7
+google-auth>=2.0
+gspread-dataframe>=2.0.0
 </file>
 
 <file path="src/cashsim/analytics/snapshot.py">
@@ -7433,6 +9411,9 @@ ignore_missing_imports = True
 [mypy-hypothesis.*]
 ignore_missing_imports = True
 
+[mypy-yaml]
+ignore_missing_imports = True
+
 [mypy-great_expectations.*]
 ignore_missing_imports = True
 
@@ -7691,6 +9672,7 @@ from cashsim.io.config_io import load_config
 from cashsim.io.csv_import import import_input_tables
 from cashsim.io.csv_tables import export_input_tables
 from cashsim.io.exporters import metrics_to_dict, write_run
+from cashsim.risk import predict_overdraft_risk
 
 APP_HELP = (
     "CashSim CLI. Use `cashsim ui` for the Streamlit app and "
@@ -7799,6 +9781,23 @@ THRESHOLD_OPTION = typer.Option(
     "--threshold",
     min=0,
     help="Threshold used by series_summary to flag first divergence.",
+)
+RISK_HORIZON_OPTION = typer.Option(
+    30,
+    "--horizon-days",
+    min=1,
+    max=366,
+)
+RISK_MODEL_OPTION = typer.Option(
+    Path("artifacts/risk/model.joblib"),
+    "--model",
+    exists=False,
+)
+RISK_TOP_K_OPTION = typer.Option(
+    5,
+    "--top-k",
+    min=0,
+    max=20,
 )
 
 
@@ -8020,6 +10019,41 @@ def import_cmd(
     typer.echo(f"Wrote config: {out.resolve()}")
 
 
+@app.command()
+def risk(
+    config: Path = CONFIG_OPTION,
+    start: str = START_OPTION,
+    horizon_days: int = RISK_HORIZON_OPTION,
+    model: Path = RISK_MODEL_OPTION,
+    top_k: int = RISK_TOP_K_OPTION,
+) -> None:
+    """Estimate overdraft risk P(balance < 0 within N days)."""
+    s = _parse_date(start)
+    run = run_from_config(config=config, start=s, days=horizon_days)
+    result = predict_overdraft_risk(
+        run.dials,
+        start=s,
+        horizon_days=horizon_days,
+        model_path=model,
+        top_k=top_k,
+    )
+
+    payload = {
+        "probability": result.probability,
+        "horizon_days": result.horizon_days,
+        "drivers": [
+            {
+                "feature": d.feature,
+                "contribution": d.contribution,
+                "direction": d.direction,
+                "value": d.value,
+            }
+            for d in result.drivers
+        ],
+    }
+    typer.echo(json.dumps(payload, indent=2))
+
+
 def main() -> None:
     # Compatibility: `cashsim` launches the UI.
     # Canonical UI: `cashsim ui`.
@@ -8060,6 +10094,7 @@ from cashsim.planning.planner import (
     plan_min_daily_earnings,
     plan_variable_daily_earnings,
 )
+from cashsim.risk import predict_overdraft_risk
 from cashsim.sim.core import simulate_month
 from cashsim.sim.types import SimMetrics
 from cashsim.ui.components import (
@@ -8620,16 +10655,70 @@ def render_wishlist_tab() -> None:
             st.error(str(e))
 
 
+def render_insights_tab() -> None:
+    dials = dials_from_state()
+
+    st.subheader("Overdraft Risk")
+    horizon = st.number_input("Horizon days", min_value=1, max_value=366, value=30)
+    top_k = st.number_input("Top drivers", min_value=0, max_value=20, value=5)
+
+    try:
+        result = predict_overdraft_risk(
+            dials, start=date.today(), horizon_days=int(horizon), top_k=int(top_k)
+        )
+        st.metric("P(balance < 0)", f"{result.probability:.1%}")
+
+        if result.drivers:
+            st.caption("Top drivers (approximate, logistic regression contributions)")
+            st.dataframe(
+                pd.DataFrame(
+                    [
+                        {
+                            "feature": d.feature,
+                            "value": d.value,
+                            "direction": d.direction,
+                            "contribution": d.contribution,
+                        }
+                        for d in result.drivers
+                    ]
+                )
+            )
+        else:
+            st.info("No driver explanation available for this model type.")
+
+    except FileNotFoundError as e:
+        st.warning(str(e))
+        st.code("dvc repro", language="bash")
+
+
 st.title("CashSim (single-page)")
 st.caption(
     "Edit inputs, bills, debt, and one-offs — then simulate and analyze break-even, "
     "and plan a daily target — all here."
 )
 
-tab_inputs, tab_bills, tab_debt, tab_oneoffs, tab_sim, tab_analytics, tab_planner, tab_wishlist = (
-    st.tabs(
-        ["Inputs", "Bills", "Debt", "One-offs", "Simulation", "Analytics", "Planner", "Wishlist"]
-    )
+(
+    tab_inputs,
+    tab_bills,
+    tab_debt,
+    tab_oneoffs,
+    tab_sim,
+    tab_analytics,
+    tab_planner,
+    tab_wishlist,
+    tab_insights,
+) = st.tabs(
+    [
+        "Inputs",
+        "Bills",
+        "Debt",
+        "One-offs",
+        "Simulation",
+        "Analytics",
+        "Planner",
+        "Wishlist",
+        "Insights",
+    ]
 )
 
 with tab_inputs:
@@ -8648,6 +10737,8 @@ with tab_planner:
     render_planner_tab()
 with tab_wishlist:
     render_wishlist_tab()
+with tab_insights:
+    render_insights_tab()
 </file>
 
 <file path="pyproject.toml">
@@ -8670,8 +10761,9 @@ dependencies = [
   "python-dateutil>=2.9.0.post0", # relativedelta
   # UI
   "streamlit>=1.49,<2.0",
-  # Streamlit dataframes use Arrow underneath; keep it modern for 3.13 wheels
-  "pyarrow>=22,<23",
+  # Streamlit dataframes use Arrow underneath; keep it modern for 3.13+ wheels.
+  "pyarrow>=22,<23; python_version>='3.13'",
+  "pyarrow>=12,<20; python_version<'3.13'",
   # NEW: Google Sheets integration
   "gspread>=6,<7",
   "google-auth>=2.0",
@@ -8697,7 +10789,20 @@ dev = [
   "bandit",
   "hypothesis>=6.112",
   "great-expectations>=0.18,<0.19",
+  "opentelemetry-api>=1.0.0",
+  "opentelemetry-sdk>=1.0.0",
+  "opentelemetry-exporter-otlp>=1.0.0",
+  "opentelemetry-instrumentation-fastapi>=0.40b0",
 
+]
+
+
+ml = [
+  "scikit-learn>=1.5,<2",
+  # mlflow pins pyarrow<20 and doesn't publish wheels for 3.13+ yet.
+  "mlflow>=2.17,<3; python_version<'3.13'",
+  "dvc>=3.50,<4",
+  "matplotlib>=3.9,<4",
 ]
 
 [project.scripts]

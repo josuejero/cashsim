@@ -7,9 +7,13 @@ from fastapi.responses import JSONResponse
 from cashsim.api.middleware import RequestIdMiddleware, TimingMiddleware
 from cashsim.api.settings import ApiSettings
 from cashsim.api.v1.routes import router as v1_router
+from cashsim.observability.logging import configure_logging
+from cashsim.observability.otel import configure_tracing, instrument_fastapi
 
 
 def create_app() -> FastAPI:
+    configure_logging()
+    configure_tracing(service_name="cashsim-api")
     settings = ApiSettings()
 
     app = FastAPI(
@@ -24,6 +28,8 @@ def create_app() -> FastAPI:
     # Middleware
     app.add_middleware(RequestIdMiddleware)
     app.add_middleware(TimingMiddleware)
+
+    instrument_fastapi(app)
 
     if settings.allow_cors:
         app.add_middleware(

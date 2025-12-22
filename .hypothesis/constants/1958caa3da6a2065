@@ -1,0 +1,4 @@
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/ml/synth.py
+# hypothesis_version: 6.148.7
+
+[0.0, 0.01, 0.05, 0.25, 0.35, 1.0, 300, 900, 1337, 1500, 2500, 4000, 5000, 8000, '--horizon-days', '--meta', '--n', '--out', '--seed', '--start', '2025-01-01', 'Output Parquet path', 'Z', '__main__', 'balance', 'features', 'generated_at', 'horizon_days', 'label', 'label_overdraft', 'n', 'n_samples', 'params.yaml', 'risk', 'seed', 'start', 'start_date']

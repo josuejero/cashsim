@@ -1,0 +1,4 @@
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/api/v1/routes.py
+# hypothesis_version: 6.148.7
+
+[400, 1000, '%.2f', '/compare', '/export', '/risk', '/simulate', 'cashsim.api', 'cashsim.days', 'cashsim.rows', 'cashsim.simulate', 'cashsim.start_date', 'csv', 'current_cash', 'date', 'days', 'duration_ms', 'event', 'events_csv', 'include_events', 'kind', 'meta', 'metrics', 'raw', 'records', 'rows', 'series_columns', 'series_csv', 'series_diff', 'series_format', 'series_json', 'simulate_end', 'simulate_start', 'start', 'start_date', 'weekday_earnings']

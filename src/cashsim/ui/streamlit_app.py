@@ -24,7 +24,6 @@ from cashsim.planning.planner import (
     plan_min_daily_earnings,
     plan_variable_daily_earnings,
 )
-from cashsim.risk import predict_overdraft_risk
 from cashsim.sim.core import simulate_month
 from cashsim.sim.types import SimMetrics
 from cashsim.ui.components import (
@@ -591,6 +590,13 @@ def render_insights_tab() -> None:
     st.subheader("Overdraft Risk")
     horizon = st.number_input("Horizon days", min_value=1, max_value=366, value=30)
     top_k = st.number_input("Top drivers", min_value=0, max_value=20, value=5)
+
+    try:
+        from cashsim.risk import predict_overdraft_risk
+    except ModuleNotFoundError:
+        st.info("Risk dependencies are not installed in this environment.")
+        st.code("pip install 'cashsim[ml]'", language="bash")
+        return
 
     try:
         result = predict_overdraft_risk(

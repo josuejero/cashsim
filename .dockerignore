@@ -1,0 +1,29 @@
+.git
+.github
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.venv
+venv
+.env
+.env.*
+*.egg-info
+.dist
+build
+
+# Common project outputs
+outputs
+mlruns
+.dvc
+.dvc/cache
+
+# Local notebooks / scratch
+notebooks
+scratch
+
+# OS
+.DS_Store

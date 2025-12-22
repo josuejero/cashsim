@@ -48,7 +48,7 @@ def _build_model(model_type: str, *, params: dict) -> Pipeline:
             learning_rate=float(params.get("learning_rate", 0.05)),
             random_state=0,
         )
-        # keep scaler for stable contribution reporting interface even though not strictly needed
+
         return Pipeline(
             steps=[
                 ("scaler", StandardScaler()),
@@ -89,7 +89,6 @@ def main() -> None:
         stratify=y if y.nunique() > 1 else None,
     )
 
-    # Train outside the MLflow run context, so we don't end up with empty/partial runs.
     pipe = _build_model(model_type, params=model_params)
     pipe.fit(X_train, y_train)
 
@@ -117,7 +116,6 @@ def main() -> None:
     Path(args.meta).parent.mkdir(parents=True, exist_ok=True)
     Path(args.meta).write_text(json.dumps(meta, indent=2))
 
-    # MLflow logging
     mlflow.set_experiment("cashsim-risk")
 
     with mlflow.start_run(run_name=f"risk-{model_type}"):

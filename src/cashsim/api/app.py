@@ -22,10 +22,8 @@ def create_app() -> FastAPI:
         default_response_class=JSONResponse,
     )
 
-    # Versioned API surface
     app.include_router(v1_router, prefix="/v1", tags=["v1"])
 
-    # Middleware
     app.add_middleware(RequestIdMiddleware)
     app.add_middleware(TimingMiddleware)
 

@@ -35,7 +35,6 @@ class JsonFormatter(logging.Formatter):
             "span_id": getattr(record, "span_id", None),
         }
 
-        # Include any "extra" fields that were attached to the LogRecord
         reserved = {
             "name",
             "msg",
@@ -78,7 +77,6 @@ def configure_logging() -> None:
     root = logging.getLogger()
     root.setLevel(level)
 
-    # Replace handlers to avoid duplicate logs when reloading
     root.handlers = []
 
     handler = logging.StreamHandler(sys.stdout)

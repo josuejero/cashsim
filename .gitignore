@@ -2,25 +2,25 @@ config.json
 bobbie_config.json
 !tests/fixtures/golden/**/config.json
 
-# Streamlit (ignore secrets only)
+
 .streamlit/secrets.toml
 
-# MLflow
+
 mlruns/
 mlflow.db
 
-# Hypothesis
+
 .hypothesis/
 
-# Local outputs
+
 inputs_out/
 run.json
 
-# Great Expectations (optional local noise)
+
 gx/expectations/.ge_store_backend_id
 gx/expectations/tmp_suite.json
 
-# Python (from the canonical template)
+
 __pycache__/
 *.py[cod]
 *$py.class
@@ -38,26 +38,26 @@ ENV/
 dist/
 build/
 
-# Env files
+
 .env
 .env.*
 
-# OS cruft
+
 .DS_Store
 Thumbs.db
 
-# MLflow
+
 mlruns/
 mlflow.db
 
-# Hypothesis
+
 .hypothesis/
 
-# Local outputs
+
 inputs_out/
 run.json
 
-# Streamlit secrets (don’t commit)
+
 .streamlit/secrets.toml
 repomix-output.xml
 .repomixignore

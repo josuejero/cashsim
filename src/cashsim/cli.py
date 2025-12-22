@@ -203,7 +203,7 @@ def simulate(
         "metrics": metrics_to_dict(run.metrics),
         "series": run.df.to_dict(orient="records"),
     }
-    # NOTE: This is primarily for quick inspection; `export` is the stable artifact writer.
+
     typer.echo(json.dumps(payload, indent=2, default=str))
 
 
@@ -263,12 +263,10 @@ def compare(
     compare_path = out_dir / "compare.json"
     diff_path = out_dir / "series_diff.csv"
 
-    # Report path: if a relative path is provided, write it under out_dir
     report_path: Path | None = None
     if report is not None:
         report_path = report if report.is_absolute() else (out_dir / report)
 
-    # Overwrite protections
     to_check: list[Path] = [compare_path]
     if series:
         to_check.append(diff_path)
@@ -296,7 +294,6 @@ def compare(
     )
 
     if series:
-        # Use the same default columns used by build_compare_payload to keep UX aligned
         cols = payload.get("meta", {}).get("series_columns", [])
         diff = series_diff(run_a.df, run_b.df, columns=list(cols))
         diff.to_csv(diff_path, index=False, lineterminator="\n")
@@ -331,7 +328,6 @@ def api(
     if reload:
         args.append("--reload")
 
-    # pass-through for things like: --log-level debug, --workers 2
     args.extend(list(ctx.args))
 
     raise SystemExit(subprocess.call(args))
@@ -408,8 +404,6 @@ def risk(
 
 
 def main() -> None:
-    # Compatibility: `cashsim` launches the UI.
-    # Canonical UI: `cashsim ui`.
     if len(sys.argv) == 1:
         sys.argv = [sys.argv[0], "ui"]
 

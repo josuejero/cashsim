@@ -1,11 +1,5 @@
 # CashSim
-<!--
-Badges (replace links once you have them)
-[![CI](https://img.shields.io/github/actions/workflow/status/<ORG>/<REPO>/ci.yml?branch=main)](<CI_URL>)
-[![Coverage](https://img.shields.io/codecov/c/github/<ORG>/<REPO>)](<COVERAGE_URL>)
-[![License](https://img.shields.io/github/license/<ORG>/<REPO>)](LICENSE)
-[![Last Commit](https://img.shields.io/github/last-commit/<ORG>/<REPO>)](https://github.com/<ORG>/<REPO>/commits/main)
--->
+
 
 [![CI](https://github.com/josuejero/cashsim/actions/workflows/ci.yml/badge.svg)](https://github.com/josuejero/cashsim/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)

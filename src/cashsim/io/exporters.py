@@ -58,11 +58,9 @@ def metrics_to_dict(metrics: SimMetrics) -> dict[str, object]:
 def _normalize_series_for_export(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
 
-    # Serialize dates deterministically
     if "date" in out.columns:
         out["date"] = pd.to_datetime(out["date"]).dt.date.astype(str)
 
-    # Convert list/dict cells to compact JSON strings for stable CSV output
     for col in out.columns:
         if out[col].dtype == "object" and col in EVENT_COLUMNS:
             out[col] = out[col].apply(
@@ -73,7 +71,6 @@ def _normalize_series_for_export(df: pd.DataFrame) -> pd.DataFrame:
                 )
             )
 
-    # Stable column order: base columns first, then per-card balance columns, then any remaining
     cc_cols = sorted([c for c in out.columns if c.startswith("cc_") and c.endswith("_bal")])
     base = [c for c in BASE_SERIES_COLUMNS if c in out.columns]
     remaining = sorted([c for c in out.columns if c not in set(base + cc_cols)])
@@ -101,7 +98,6 @@ def write_series_json(df: pd.DataFrame, path: Path) -> None:
 
 
 def write_events_csv(df: pd.DataFrame, path: Path) -> None:
-    # Flatten event columns into a single table for easier analysis.
     rows: list[dict[str, object]] = []
 
     if "date" not in df.columns:
@@ -131,7 +127,6 @@ def write_events_csv(df: pd.DataFrame, path: Path) -> None:
 def prepare_outdir(out_dir: Path, *, overwrite: bool) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # If overwrite is False, fail fast if we would clobber known artifacts.
     if not overwrite:
         for name in [
             "metrics.json",

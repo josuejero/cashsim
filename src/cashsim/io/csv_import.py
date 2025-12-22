@@ -64,15 +64,12 @@ def _validate_rows[T: BaseModel](df: pd.DataFrame, model: type[T], *, strict: bo
     if df.empty:
         return []
 
-    # Convert empty strings to nulls before normalization
     df = df.replace({"": None})
 
-    # Normalize booleans if present
     for col in ("must_pay",):
         if col in df.columns:
             df[col] = df[col].map(_coerce_bool)
 
-    # Strict mode: reject extra columns
     expected = set(model.model_fields.keys())
     got = set(df.columns)
     if strict:
@@ -82,7 +79,6 @@ def _validate_rows[T: BaseModel](df: pd.DataFrame, model: type[T], *, strict: bo
 
     rows: list[T] = []
     for rec in df.to_dict(orient="records"):
-        # Ignore unknown columns in non-strict mode
         cleaned = {k: v for k, v in rec.items() if k in expected and not pd.isna(v)}
         rows.append(model.model_validate(cleaned))
     return rows
@@ -120,7 +116,6 @@ def import_input_tables(
     ious_df = _read_csv_df(in_dir / "ious.csv")
     oneoffs_df = _read_csv_df(in_dir / "oneoffs.csv")
 
-    # Back-compat aliases (common spreadsheet naming)
     if "due_day" in bills_df.columns and "usual_day" not in bills_df.columns:
         bills_df = bills_df.rename(columns={"due_day": "usual_day"})
 
@@ -138,8 +133,6 @@ def import_input_tables(
     if not oneoffs_df.empty:
         base["oneoffs"] = [OneOff(**r.model_dump()) for r in oneoffs_rows]
 
-    # If tables were empty but present, prefer empty lists over base lists
-    # (to let analysts clear tables intentionally)
     if (in_dir / "bills.csv").exists() and bills_df.empty:
         base["bills"] = []
     if (in_dir / "credit_cards.csv").exists() and cards_df.empty:
@@ -149,5 +142,4 @@ def import_input_tables(
     if (in_dir / "oneoffs.csv").exists() and oneoffs_df.empty:
         base["oneoffs"] = []
 
-    # Let Pydantic validate the final structure
     return Dials.model_validate(base)

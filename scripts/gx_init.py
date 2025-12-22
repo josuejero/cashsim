@@ -18,10 +18,8 @@ def main() -> None:
 
     repo_root = Path(__file__).resolve().parents[1]
 
-    # Create or load a FileDataContext rooted at repo
     context = gx.get_context(project_root_dir=repo_root, mode="file")
 
-    # Configure a docs site (writes to a directory)
     docs_site_config = {
         "class_name": "SiteBuilder",
         "site_index_builder": {"class_name": "DefaultSiteIndexBuilder"},
@@ -31,15 +29,12 @@ def main() -> None:
         },
     }
 
-    # Make the config idempotent
     if not hasattr(context, "add_data_docs_site"):
-        # GX versions vary; if this is missing, rely on great_expectations.yml defaults.
         return
 
     try:
         context.add_data_docs_site(site_name="local_site", site_config=docs_site_config)
     except Exception:
-        # If already exists, update it.
         context.update_data_docs_site(site_name="local_site", site_config=docs_site_config)
 
 

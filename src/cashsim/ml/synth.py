@@ -23,14 +23,12 @@ def _rng_float(rng: random.Random, a: float, b: float) -> float:
 
 
 def _mk_dials(rng: random.Random, *, start: date, horizon_days: int) -> Dials:
-    # Core dials
     current_cash = _rng_float(rng, 0, 2500)
     safety_cushion = _rng_float(rng, 0, 1500)
     weekday_earnings = _rng_float(rng, 0, 300)
     gas_pct = float(round(rng.uniform(0.05, 0.25), 3))
     gas_fill_size = _rng_float(rng, 10, 70)
 
-    # Bills
     bills: list[Bill] = []
     for i in range(rng.randint(0, 5)):
         bills.append(
@@ -41,7 +39,6 @@ def _mk_dials(rng: random.Random, *, start: date, horizon_days: int) -> Dials:
             )
         )
 
-    # Credit cards
     ccs: list[CreditCard] = []
     for i in range(rng.randint(0, 3)):
         ccs.append(
@@ -56,7 +53,6 @@ def _mk_dials(rng: random.Random, *, start: date, horizon_days: int) -> Dials:
             )
         )
 
-    # IOUs
     ious: list[IOU] = []
     for i in range(rng.randint(0, 2)):
         ious.append(
@@ -70,7 +66,6 @@ def _mk_dials(rng: random.Random, *, start: date, horizon_days: int) -> Dials:
             )
         )
 
-    # One-offs due within horizon
     oneoffs: list[OneOff] = []
     for i in range(rng.randint(0, 4)):
         dd = start + timedelta(days=rng.randint(0, max(1, horizon_days - 1)))
@@ -104,7 +99,7 @@ def generate(*, n: int, seed: int, start: date, horizon_days: int) -> pd.DataFra
     for _ in range(n):
         d = _mk_dials(rng, start=start, horizon_days=horizon_days)
         df, _metrics = simulate_month(d, start=start, days=horizon_days)
-        # label: overdraft if any daily balance < 0
+
         overdraft = bool((df["balance"] < 0).any())
 
         feats = featurize_dials(d, start=start, horizon_days=horizon_days)
@@ -113,7 +108,7 @@ def generate(*, n: int, seed: int, start: date, horizon_days: int) -> pd.DataFra
         rows.append(feats)
 
     out = pd.DataFrame(rows)
-    # stable column ordering
+
     out = out[FEATURE_COLUMNS + ["label_overdraft"]]
     return out
 
@@ -123,8 +118,6 @@ def main() -> None:
     ap.add_argument("--out", required=True, help="Output Parquet path")
     ap.add_argument("--meta", required=True, help="Output metadata JSON path")
 
-    # pull defaults from params.yaml via environment-free convention:
-    # - for DVC reproduction, params changes invalidate stages anyway
     ap.add_argument("--n", type=int, default=None)
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--start", type=str, default=None)
@@ -132,7 +125,6 @@ def main() -> None:
 
     args = ap.parse_args()
 
-    # Read params.yaml if present
     import yaml
 
     params = yaml.safe_load(Path("params.yaml").read_text()) if Path("params.yaml").exists() else {}

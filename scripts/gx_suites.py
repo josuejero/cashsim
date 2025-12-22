@@ -124,7 +124,7 @@ def _suite_cards(name: str) -> ExpectationSuiteT:
         column="min_floor",
         min_value=0,
     )
-    # due_day may be null
+
     return suite
 
 

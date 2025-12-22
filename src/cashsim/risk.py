@@ -16,7 +16,7 @@ from cashsim.models import Dials
 @dataclass(frozen=True)
 class RiskDriver:
     feature: str
-    contribution: float  # log-odds contribution
+    contribution: float
     direction: Literal["increases", "decreases"]
     value: float
 
@@ -68,7 +68,6 @@ def predict_overdraft_risk(
     proba = pipe.predict_proba(X)
     p = float(proba[0][1])
 
-    # Explainability: approximate logistic regression drivers via coef * standardized value.
     drivers: list[RiskDriver] = []
     try:
         scaler = pipe.named_steps.get("scaler")
@@ -97,7 +96,6 @@ def predict_overdraft_risk(
                     )
                 )
     except Exception:
-        # If explainability fails for any reason, we still return the probability.
         drivers = []
 
     return RiskResult(probability=p, horizon_days=horizon_days, drivers=drivers)

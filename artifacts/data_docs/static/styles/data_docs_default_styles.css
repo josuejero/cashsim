@@ -94,9 +94,9 @@ td .show-scrollbars {
   max-height: 80vh;
 }
 
-/*.show-scrollbars ul {*/
-/*  padding-bottom: 20px*/
-/*}*/
+
+
+
 
 .show-scrollbars::-webkit-scrollbar {
   -webkit-appearance: none;
@@ -112,7 +112,7 @@ td .show-scrollbars {
 
 .show-scrollbars::-webkit-scrollbar-thumb {
   border-radius: 8px;
-  border: 2px solid white; /* should match background, can't be transparent */
+  border: 2px solid white; 
   background-color: rgba(0, 0, 0, .5);
 }
 
@@ -152,7 +152,7 @@ footer a:hover {
     text-decoration: underline;
 }
 
-/* some css overrides for dark mode*/
+
 @media (prefers-color-scheme: dark) {
   .table {
     color: #f1f1f1 !important;

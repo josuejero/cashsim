@@ -12,6 +12,5 @@ class ApiSettings(BaseSettings):
     port: int = 8000
     log_level: str = "info"
 
-    # Basic hardening toggles
     allow_cors: bool = False
     cors_allow_origins: str = "*"

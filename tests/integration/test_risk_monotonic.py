@@ -8,7 +8,6 @@ from cashsim.risk import predict_overdraft_risk
 
 
 def test_more_cash_should_not_increase_risk(tmp_path: Path) -> None:
-    # Skip if model isn't present locally
     model_path = Path("artifacts/risk/model.joblib")
     if not model_path.exists():
         return

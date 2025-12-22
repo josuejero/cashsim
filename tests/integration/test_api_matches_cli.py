@@ -35,7 +35,6 @@ def test_api_simulate_matches_cli_simulate(tmp_path: Path) -> None:
     start = "2025-01-01"
     days = "10"
 
-    # CLI
     runner = CliRunner()
     r = runner.invoke(
         cli_app, ["simulate", "--config", str(cfg_path), "--start", start, "--days", days]
@@ -43,7 +42,6 @@ def test_api_simulate_matches_cli_simulate(tmp_path: Path) -> None:
     assert r.exit_code == 0, r.stdout
     cli_body = json.loads(r.stdout)
 
-    # API
     dials = json.loads(cfg_path.read_text(encoding="utf-8"))
     api_body = client.post(
         "/v1/simulate", json={"dials": dials, "start": start, "days": int(days)}

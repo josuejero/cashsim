@@ -210,7 +210,6 @@ def validate_inputs(inputs_dir: Path) -> bool:
         csv_path = inputs_dir / filename
         df = _read_csv_if_exists(csv_path)
         if df is None:
-            # Optional files are ok to skip
             if filename in {"transactions.csv"}:
                 continue
             all_ok = False
@@ -232,7 +231,6 @@ def validate_inputs(inputs_dir: Path) -> bool:
         if not results.success:
             all_ok = False
 
-    # Build Data Docs (includes latest validation results)
     try:
         context.build_data_docs()
     except Exception as e:

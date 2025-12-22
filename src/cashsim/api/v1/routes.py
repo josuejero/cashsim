@@ -52,7 +52,6 @@ def _series_csv_export(df: pd.DataFrame) -> str:
     out = normalize_series_for_export(df)
     buf = StringIO()
 
-    # lineterminator avoids Windows-style CRLF surprises in tests
     out.to_csv(buf, index=False, lineterminator="\n", float_format="%.2f")
     return buf.getvalue()
 
@@ -83,7 +82,6 @@ def _events_csv_export(df: pd.DataFrame) -> str:
     if len(out) == 0:
         out = pd.DataFrame(columns=["date", "kind"])
 
-    # Stable date serialization
     if "date" in out.columns:
         out["date"] = pd.to_datetime(out["date"]).dt.date.astype(str)
 
@@ -185,7 +183,6 @@ def compare(req: CompareRequest) -> CompareResponse:
         threshold=req.threshold,
     )
 
-    # API keeps series_diff optional
     if req.series:
         cols = payload.get("meta", {}).get("series_columns", [])
         diff = series_diff(df_a, df_b, columns=list(cols))

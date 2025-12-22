@@ -64,14 +64,11 @@ def test_basic_invariants_hold_for_golden_scenarios() -> None:
         assert len(df) == DAYS
         assert "date" in df.columns
 
-        # No NaNs in numeric columns
         num = df.select_dtypes(include=["number"])
         assert not num.isna().any().any(), f"NaNs found in numeric columns for {scen.name}"
 
-        # Date monotonicity
         dates = pd.to_datetime(df["date"]).dt.date
         assert dates.is_monotonic_increasing
 
-        # Required core columns should exist
         for col in ["balance", "earn", "bill_due", "gas_bucket"]:
             assert col in df.columns, f"Missing {col} for {scen.name}"

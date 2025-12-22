@@ -76,11 +76,9 @@ class ExportResponse(BaseModel):
     metrics: SimMetricsWire
     meta: dict[str, Any]
 
-    # Exactly one of these should be present based on series_format:
     series_csv: str | None = None
     series_json: list[dict[str, Any]] | None = None
 
-    # Present only if include_events=true
     events_csv: str | None = None
 
 

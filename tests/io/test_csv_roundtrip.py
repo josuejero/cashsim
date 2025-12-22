@@ -16,5 +16,4 @@ def test_export_import_roundtrip(tmp_path: Path) -> None:
 
     d2 = import_input_tables(out_dir)
 
-    # Pydantic models support structural comparison by dump
     assert dials.model_dump(mode="json") == d2.model_dump(mode="json")

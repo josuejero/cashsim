@@ -11,7 +11,6 @@ from cashsim.io.exporters import write_metrics_json, write_series_csv
 
 
 def _scenario_name(config_path: Path) -> str:
-    # e.g. stress_tight.fixed.json -> stress_tight_fixed
     stem = config_path.stem
     return stem.replace(".", "_")
 
@@ -68,7 +67,6 @@ def main() -> None:
 
         dest.mkdir(parents=True, exist_ok=True)
 
-        # Keep a single canonical config filename per scenario
         config_copy = dest / "config.json"
         shutil.copyfile(cfg, config_copy)
 

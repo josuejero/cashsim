@@ -41,7 +41,7 @@ def test_risk_schema_contract() -> None:
     }
 
     r = client.post("/v1/risk", json=payload)
-    assert r.status_code in (200, 500)  # 500 acceptable if model file missing
+    assert r.status_code in (200, 500)
 
     if r.status_code == 200:
         body = r.json()

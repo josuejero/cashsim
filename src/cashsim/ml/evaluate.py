@@ -47,7 +47,6 @@ def main() -> None:
 
     (outdir / "metrics.json").write_text(json.dumps(metrics, indent=2))
 
-    # calibration plot
     plt.figure()
     plt.plot([0, 1], [0, 1])
     plt.plot(mean_pred, frac_pos)

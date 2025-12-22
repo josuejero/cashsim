@@ -15,15 +15,15 @@ venv
 .dist
 build
 
-# Common project outputs
+
 outputs
 mlruns
 .dvc
 .dvc/cache
 
-# Local notebooks / scratch
+
 notebooks
 scratch
 
-# OS
+
 .DS_Store

@@ -35,6 +35,5 @@ def test_simulate_valid_payload_200_and_schema_stable() -> None:
 
 
 def test_simulate_invalid_payload_422() -> None:
-    # Missing required field: dials
     r = client.post("/v1/simulate", json={"start": "2025-01-01", "days": 10})
     assert r.status_code == 422

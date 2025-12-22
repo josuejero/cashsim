@@ -67,5 +67,4 @@ def featurize_dials(dials: Dials, *, start: date, horizon_days: int) -> dict[str
         "num_oneoffs": num_oneoffs,
     }
 
-    # Defensive: always return all columns in stable order
     return {k: float(feats.get(k, 0.0)) for k in FEATURE_COLUMNS}

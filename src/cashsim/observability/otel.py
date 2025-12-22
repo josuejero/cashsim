@@ -18,11 +18,9 @@ def _truthy(value: str | None) -> bool:
 
 
 def otel_enabled() -> bool:
-    # Explicit flag wins
     if "CASHSIM_OTEL_ENABLED" in os.environ:
         return _truthy(os.getenv("CASHSIM_OTEL_ENABLED"))
 
-    # Otherwise, enable if an OTLP endpoint is provided
     return bool(os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT"))
 
 
@@ -39,7 +37,6 @@ def configure_tracing(service_name: str = "cashsim") -> None:
     if not otel_enabled():
         return
 
-    # Avoid re-configuring if someone else already configured a provider
     current = trace.get_tracer_provider()
     if isinstance(current, TracerProvider):
         return
@@ -68,6 +65,5 @@ def instrument_fastapi(app: FastAPI) -> None:
 
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-    # Exclude super-noisy endpoints if desired
     excluded = os.getenv("OTEL_EXCLUDED_URLS", "health")
     FastAPIInstrumentor.instrument_app(app, excluded_urls=excluded)

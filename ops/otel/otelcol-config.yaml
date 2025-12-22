@@ -10,18 +10,18 @@ processors:
   batch: {}
 
 connectors:
-  # Convert trace spans into Prometheus metrics (latency, counts, error rates)
+
   spanmetrics:
     namespace: cashsim.spanmetrics
 
 exporters:
-  # Send traces to Jaeger via OTLP
+
   otlp/jaeger:
     endpoint: jaeger:4317
     tls:
       insecure: true
 
-  # Expose metrics for Prometheus to scrape
+
   prometheus:
     endpoint: 0.0.0.0:8889
     resource_to_telemetry_conversion:

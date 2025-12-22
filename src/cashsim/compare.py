@@ -17,12 +17,10 @@ TIMELINE_FIELDS: list[str] = [
 ]
 
 SERIES_DEFAULT_COLUMNS: list[str] = [
-    # Keep existing Phase 1/2 columns first
     "balance",
     "total_cc_balance",
     "total_iou_balance",
     "accrued_interest_unposted",
-    # Additional helpful levers
     "earn",
     "bill_due",
     "gas_bucket",
@@ -177,7 +175,6 @@ def category_totals(df: pd.DataFrame) -> dict[str, float]:
     else:
         out["oneoffs_paid"] = 0.0
 
-    # For now: interest is tracked on-card, not as cashflow, but it’s still useful context.
     if "cc_interest_posted" in df.columns:
         out["interest_posted"] = round(
             float(df["cc_interest_posted"].apply(_sum_event_amounts).sum()), 2
@@ -299,7 +296,6 @@ def render_compare_markdown(payload: dict[str, Any], *, series_diff_path: str | 
     if series_diff_path:
         lines.append(f"- series_diff: {series_diff_path}")
 
-    # Metrics
     metrics = payload.get("metrics", {})
     a = metrics.get("a", {})
     b = metrics.get("b", {})
@@ -321,7 +317,6 @@ def render_compare_markdown(payload: dict[str, Any], *, series_diff_path: str | 
         else:
             lines.append(f"| {k} | {va} | {vb} | {dv} |")
 
-    # Timeline
     timeline = payload.get("timeline", {})
     lines.append("")
     lines.append("## Timeline deltas")
@@ -332,7 +327,6 @@ def render_compare_markdown(payload: dict[str, Any], *, series_diff_path: str | 
         t = timeline[k]
         lines.append(f"| {k} | {t.get('a')} | {t.get('b')} | {t.get('delta_days')} |")
 
-    # Category totals
     cats = payload.get("category_totals", {})
     lines.append("")
     lines.append("## Category totals")
@@ -343,7 +337,6 @@ def render_compare_markdown(payload: dict[str, Any], *, series_diff_path: str | 
         c = cats[k]
         lines.append(f"| {k} | {c.get('a')} | {c.get('b')} | {c.get('delta')} |")
 
-    # Series summary
     ss = payload.get("series_summary", {})
     lines.append("")
     lines.append("## Series divergence summary")

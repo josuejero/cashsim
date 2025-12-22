@@ -15,6 +15,9 @@ from cashsim.compare import (
     render_compare_markdown,
     series_diff,
 )
+from cashsim.io.config_io import load_config
+from cashsim.io.csv_import import import_input_tables
+from cashsim.io.csv_tables import export_input_tables
 from cashsim.io.exporters import metrics_to_dict, write_run
 
 APP_HELP = (
@@ -53,6 +56,11 @@ OUT_OPTION = typer.Option(
     "--out",
     help="Output directory.",
 )
+INPUTS_OUT_OPTION = typer.Option(
+    Path("inputs_out"),
+    "--out",
+    help="Output directory.",
+)
 SERIES_FORMAT_OPTION = typer.Option(
     "csv",
     "--series-format",
@@ -68,6 +76,26 @@ OVERWRITE_OPTION = typer.Option(
     "--overwrite",
     help="Overwrite existing artifacts in --out.",
 )
+IMPORT_FROM_OPTION = typer.Option(
+    ...,
+    "--from",
+    exists=True,
+    file_okay=False,
+    help="Folder with CSV tables.",
+)
+IMPORT_OUT_OPTION = typer.Option(
+    Path("config.imported.json"),
+    "--out",
+    help="Output config JSON path.",
+)
+IMPORT_BASE_CONFIG_OPTION = typer.Option(
+    None,
+    "--base-config",
+    exists=True,
+    dir_okay=False,
+    help="Optional base Dials config if dials.json is not present in --from.",
+)
+IMPORT_STRICT_OPTION = typer.Option(False, "--strict", help="Reject extra CSV columns.")
 A_OPTION = typer.Option(
     ...,
     "--a",
@@ -290,6 +318,34 @@ def api(
     args.extend(list(ctx.args))
 
     raise SystemExit(subprocess.call(args))
+
+
+@app.command("export-inputs")
+def export_inputs_cmd(
+    config: Path = CONFIG_OPTION,
+    out: Path = INPUTS_OUT_OPTION,
+    overwrite: bool = OVERWRITE_OPTION,
+) -> None:
+    """Export canonical input CSV tables + dials.json into a folder."""
+
+    dials = load_config(config)
+    export_input_tables(dials, out, overwrite=overwrite)
+    typer.echo(f"Wrote input tables to: {out.resolve()}")
+
+
+@app.command("import")
+def import_cmd(
+    from_dir: Path = IMPORT_FROM_OPTION,
+    out: Path = IMPORT_OUT_OPTION,
+    base_config: Path | None = IMPORT_BASE_CONFIG_OPTION,
+    strict: bool = IMPORT_STRICT_OPTION,
+) -> None:
+    """Import canonical input tables into a Dials JSON config."""
+
+    dials = import_input_tables(from_dir, base_config=base_config, strict=strict)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(dials.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    typer.echo(f"Wrote config: {out.resolve()}")
 
 
 def main() -> None:

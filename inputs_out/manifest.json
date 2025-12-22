@@ -1,0 +1,12 @@
+{
+  "files": {
+    "bills": "bills.csv",
+    "credit_cards": "credit_cards.csv",
+    "dials": "dials.json",
+    "ious": "ious.csv",
+    "oneoffs": "oneoffs.csv",
+    "transactions": "transactions.csv"
+  },
+  "generated_at": "2025-12-22T03:53:01.064211Z",
+  "schema_version": "v1"
+}

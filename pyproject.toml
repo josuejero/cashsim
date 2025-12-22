@@ -36,16 +36,15 @@ dev = [
   "pytest>=8.2",
   "httpx>=0.27,<1.0",
   "mypy>=1.10",
-  "types-python-dateutil>=2.9.0.20250822"
-,
-  "pyright"
-,
-  "pandas-stubs"
-,
+  "types-python-dateutil>=2.9.0.20250822",
+  "pyright",
+  "pandas-stubs",
   "MonkeyType",
   "pre-commit",
   "bandit",
-  "hypothesis>=6.112"
+  "hypothesis>=6.112",
+  "great-expectations>=0.18,<0.19",
+
 ]
 
 [project.scripts]

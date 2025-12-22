@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import subprocess
 import sys
 from datetime import date
 from pathlib import Path
@@ -9,7 +10,11 @@ from pathlib import Path
 import typer
 
 from cashsim.batch import run_from_config
-from cashsim.compare import metrics_delta, series_diff
+from cashsim.compare import (
+    build_compare_payload,
+    render_compare_markdown,
+    series_diff,
+)
 from cashsim.io.exporters import metrics_to_dict, write_run
 
 APP_HELP = (
@@ -81,6 +86,19 @@ SERIES_OPTION = typer.Option(
     False,
     "--series/--no-series",
     help="Also write an aligned series_diff.csv.",
+)
+REPORT_OPTION = typer.Option(
+    None,
+    "--report",
+    help=(
+        "Write a human-readable compare report to Markdown. If relative, it is written under --out."
+    ),
+)
+THRESHOLD_OPTION = typer.Option(
+    0.01,
+    "--threshold",
+    min=0,
+    help="Threshold used by series_summary to flag first divergence.",
 )
 
 
@@ -184,39 +202,94 @@ def compare(
     days: int = DAYS_OPTION,
     out: Path = OUT_OPTION,
     series: bool = SERIES_OPTION,
+    report: Path | None = REPORT_OPTION,
+    threshold: float = THRESHOLD_OPTION,
     overwrite: bool = OVERWRITE_OPTION,
 ) -> None:
-    """Compare two configs (skeleton: metrics delta; optional series delta)."""
+    """Compare two configs (deep compare + optional series diff + optional Markdown report)."""
+
     s = _parse_date(start)
     run_a = run_from_config(config=a, start=s, days=days)
     run_b = run_from_config(config=b, start=s, days=days)
 
     out_dir = out.resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
-    compare_path = out_dir / "compare.json"
-    if not overwrite and compare_path.exists():
-        raise typer.BadParameter(f"Refusing to overwrite {compare_path} (use --overwrite)")
 
-    compare_payload = metrics_delta(run_a.metrics, run_b.metrics)
+    compare_path = out_dir / "compare.json"
+    diff_path = out_dir / "series_diff.csv"
+
+    # Report path: if a relative path is provided, write it under out_dir
+    report_path: Path | None = None
+    if report is not None:
+        report_path = report if report.is_absolute() else (out_dir / report)
+
+    # Overwrite protections
+    to_check: list[Path] = [compare_path]
+    if series:
+        to_check.append(diff_path)
+    if report_path is not None:
+        to_check.append(report_path)
+
+    if not overwrite:
+        for p in to_check:
+            if p.exists():
+                raise typer.BadParameter(f"Refusing to overwrite {p} (use --overwrite)")
+
+    payload = build_compare_payload(
+        metrics_a=run_a.metrics,
+        metrics_b=run_b.metrics,
+        df_a=run_a.df,
+        df_b=run_b.df,
+        start=start,
+        days=days,
+        threshold=threshold,
+    )
+
     compare_path.write_text(
-        json.dumps(compare_payload, indent=2, sort_keys=True) + "\n",
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
 
     if series:
-        diff = series_diff(
-            run_a.df,
-            run_b.df,
-            columns=[
-                "balance",
-                "total_cc_balance",
-                "total_iou_balance",
-                "accrued_interest_unposted",
-            ],
+        # Use the same default columns used by build_compare_payload to keep UX aligned
+        cols = payload.get("meta", {}).get("series_columns", [])
+        diff = series_diff(run_a.df, run_b.df, columns=list(cols))
+        diff.to_csv(diff_path, index=False, lineterminator="\n")
+
+    if report_path is not None:
+        md = render_compare_markdown(
+            payload, series_diff_path=("series_diff.csv" if series else None)
         )
-        diff.to_csv(out_dir / "series_diff.csv", index=False, lineterminator="\n")
+        report_path.write_text(md, encoding="utf-8", newline="\n")
 
     typer.echo(f"Wrote compare artifacts to: {out_dir}")
+
+
+@app.command(context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
+def api(
+    ctx: typer.Context,
+    host: str = "127.0.0.1",
+    port: int = 8000,
+    reload: bool = False,
+) -> None:
+    """Run the CashSim FastAPI server (Uvicorn)."""
+
+    args = [
+        "uvicorn",
+        "cashsim.api.app:app",
+        "--host",
+        host,
+        "--port",
+        str(port),
+    ]
+
+    if reload:
+        args.append("--reload")
+
+    # pass-through for things like: --log-level debug, --workers 2
+    args.extend(list(ctx.args))
+
+    raise SystemExit(subprocess.call(args))
 
 
 def main() -> None:

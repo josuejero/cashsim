@@ -9,8 +9,8 @@
     {"name": "Utilities", "usual_day": 15, "amount": 110.0}
   ],
   "credit_cards": [
-    {"name": "Card A", "apr": 0.2499, "balance": 1800.0, "limit": 2500.0, "min_pct": 0.03, "statement_day": 20, "due_day": 14},
-    {"name": "Card B", "apr": 0.1799, "balance": 900.0, "limit": 2000.0, "min_pct": 0.03, "statement_day": 10, "due_day": 4}
+    {"name": "Card A", "apr": 0.2499, "balance": 1800.0, "limit": 2500.0, "min_pct": 0.03, "min_floor": 25.0, "statement_day": 20, "due_day": 14},
+    {"name": "Card B", "apr": 0.1799, "balance": 900.0, "limit": 2000.0, "min_pct": 0.03, "min_floor": 25.0, "statement_day": 10, "due_day": 4}
   ],
   "ious": [],
   "oneoffs": [],

@@ -1,0 +1,12 @@
+{
+  "days": 31,
+  "scenarios": [
+    "debt_payoff",
+    "sample",
+    "simple_baseline",
+    "stress_tight_fixed",
+    "stress_tight"
+  ],
+  "source_dir": "examples/configs",
+  "start": "2025-01-01"
+}

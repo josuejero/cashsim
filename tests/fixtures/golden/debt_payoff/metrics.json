@@ -1,0 +1,10 @@
+{
+  "accrued_interest_estimate": 20.97,
+  "cushion_breach_date": "2025-01-01",
+  "first_negative_date": "2025-01-01",
+  "friend_ask_latest_date": "2025-01-01",
+  "friend_ask_needed": 410.2,
+  "min_balance": -410.2,
+  "min_balance_date": "2025-01-01",
+  "total_upcoming_bills": 1041.0
+}

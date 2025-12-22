@@ -1,0 +1,4 @@
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/api/app.py
+# hypothesis_version: 6.148.7
+
+['*', ',', '/healthz', '/v1', '1.0.0', 'CashSim API', 'ok', 'status', 'v1']

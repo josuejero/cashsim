@@ -1,44 +1,189 @@
 {
-  "a": {
-    "accrued_interest_estimate": 0,
-    "cushion_breach_date": "2025-01-01",
-    "first_negative_date": "2025-01-01",
-    "friend_ask_latest_date": "2025-01-01",
-    "friend_ask_needed": 298.0,
-    "min_balance": -298.0,
-    "min_balance_date": "2025-01-01",
-    "total_upcoming_bills": 1015.0
+  "category_totals": {
+    "cc_extra_paid": {
+      "a": 0.0,
+      "b": 0.0,
+      "delta": 0.0
+    },
+    "cc_mins_paid": {
+      "a": 0.0,
+      "b": 66.0,
+      "delta": 66.0
+    },
+    "debt_payments_total": {
+      "a": 0.0,
+      "b": 66.0,
+      "delta": 66.0
+    },
+    "income": {
+      "a": 3720.0,
+      "b": 2945.0,
+      "delta": -775.0
+    },
+    "interest_posted": {
+      "a": 0.0,
+      "b": 39.44,
+      "delta": 39.44
+    },
+    "non_debt_bills": {
+      "a": 1015.0,
+      "b": 1040.0,
+      "delta": 25.0
+    },
+    "oneoffs_paid": {
+      "a": 0.0,
+      "b": 0.0,
+      "delta": 0.0
+    },
+    "spend_total": {
+      "a": 1015.0,
+      "b": 1040.0,
+      "delta": 25.0
+    }
   },
-  "b": {
-    "accrued_interest_estimate": 16.07,
-    "cushion_breach_date": "2025-01-01",
-    "first_negative_date": "2025-01-01",
-    "friend_ask_latest_date": "2025-01-01",
-    "friend_ask_needed": 704.0,
-    "min_balance": -704.0,
-    "min_balance_date": "2025-01-01",
-    "total_upcoming_bills": 1106.0
+  "meta": {
+    "days": 31,
+    "series_columns": [
+      "balance",
+      "total_cc_balance",
+      "total_iou_balance",
+      "accrued_interest_unposted",
+      "earn",
+      "bill_due",
+      "gas_bucket"
+    ],
+    "start": "2025-01-01",
+    "threshold": 0.01
   },
-  "delta": {
-    "accrued_interest_estimate": 16.07,
+  "metrics": {
+    "a": {
+      "accrued_interest_estimate": 0,
+      "cushion_breach_date": "2025-01-01",
+      "first_negative_date": "2025-01-01",
+      "friend_ask_latest_date": "2025-01-01",
+      "friend_ask_needed": 298.0,
+      "min_balance": -298.0,
+      "min_balance_date": "2025-01-01",
+      "total_upcoming_bills": 1015.0
+    },
+    "b": {
+      "accrued_interest_estimate": 16.07,
+      "cushion_breach_date": "2025-01-01",
+      "first_negative_date": "2025-01-01",
+      "friend_ask_latest_date": "2025-01-01",
+      "friend_ask_needed": 704.0,
+      "min_balance": -704.0,
+      "min_balance_date": "2025-01-01",
+      "total_upcoming_bills": 1106.0
+    },
+    "delta": {
+      "accrued_interest_estimate": 16.07,
+      "cushion_breach_date": {
+        "a": "2025-01-01",
+        "b": "2025-01-01"
+      },
+      "first_negative_date": {
+        "a": "2025-01-01",
+        "b": "2025-01-01"
+      },
+      "friend_ask_latest_date": {
+        "a": "2025-01-01",
+        "b": "2025-01-01"
+      },
+      "friend_ask_needed": 406.0,
+      "min_balance": -406.0,
+      "min_balance_date": {
+        "a": "2025-01-01",
+        "b": "2025-01-01"
+      },
+      "total_upcoming_bills": 91.0
+    }
+  },
+  "series_summary": {
+    "accrued_interest_unposted": {
+      "days_exceeding_threshold": 30,
+      "first_exceeds_threshold_date": "2025-01-01",
+      "max_abs_delta": 37.69,
+      "max_abs_delta_date": "2025-01-21",
+      "mean_abs_delta": 16.04,
+      "rmse": 19.4,
+      "threshold": 0.01
+    },
+    "balance": {
+      "days_exceeding_threshold": 31,
+      "first_exceeds_threshold_date": "2025-01-01",
+      "max_abs_delta": 1466.0,
+      "max_abs_delta_date": "2025-01-31",
+      "mean_abs_delta": 864.35,
+      "rmse": 936.28,
+      "threshold": 0.01
+    },
+    "bill_due": {
+      "days_exceeding_threshold": 3,
+      "first_exceeds_threshold_date": "2025-01-05",
+      "max_abs_delta": 140.0,
+      "max_abs_delta_date": "2025-01-18",
+      "mean_abs_delta": 8.23,
+      "rmse": 29.09,
+      "threshold": 0.01
+    },
+    "earn": {
+      "days_exceeding_threshold": 31,
+      "first_exceeds_threshold_date": "2025-01-01",
+      "max_abs_delta": 25.0,
+      "max_abs_delta_date": "2025-01-01",
+      "mean_abs_delta": 25.0,
+      "rmse": 25.0,
+      "threshold": 0.01
+    },
+    "gas_bucket": {
+      "days_exceeding_threshold": 30,
+      "first_exceeds_threshold_date": "2025-01-01",
+      "max_abs_delta": 21.0,
+      "max_abs_delta_date": "2025-01-04",
+      "mean_abs_delta": 8.19,
+      "rmse": 10.34,
+      "threshold": 0.01
+    },
+    "total_cc_balance": {
+      "days_exceeding_threshold": 31,
+      "first_exceeds_threshold_date": "2025-01-01",
+      "max_abs_delta": 2200.0,
+      "max_abs_delta_date": "2025-01-01",
+      "mean_abs_delta": 2178.66,
+      "rmse": 2178.8,
+      "threshold": 0.01
+    },
+    "total_iou_balance": {
+      "days_exceeding_threshold": 0,
+      "first_exceeds_threshold_date": null,
+      "max_abs_delta": 0.0,
+      "max_abs_delta_date": "2025-01-01",
+      "mean_abs_delta": 0.0,
+      "rmse": 0.0,
+      "threshold": 0.01
+    }
+  },
+  "timeline": {
     "cushion_breach_date": {
       "a": "2025-01-01",
-      "b": "2025-01-01"
+      "b": "2025-01-01",
+      "delta_days": 0
     },
     "first_negative_date": {
       "a": "2025-01-01",
-      "b": "2025-01-01"
+      "b": "2025-01-01",
+      "delta_days": 0
     },
     "friend_ask_latest_date": {
       "a": "2025-01-01",
-      "b": "2025-01-01"
+      "b": "2025-01-01",
+      "delta_days": 0
     },
-    "friend_ask_needed": 406.0,
-    "min_balance": -406.0,
     "min_balance_date": {
       "a": "2025-01-01",
-      "b": "2025-01-01"
-    },
-    "total_upcoming_bills": 91.0
+      "b": "2025-01-01",
+      "delta_days": 0
+    }
   }
 }

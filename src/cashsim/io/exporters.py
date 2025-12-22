@@ -189,3 +189,11 @@ def write_run(
 
     if include_events:
         write_events_csv(df, out_dir / "events.csv")
+
+
+def normalize_series_for_export(df: pd.DataFrame) -> pd.DataFrame:
+    """Public wrapper for the project’s stable series normalization.
+
+    API and CLI must share the same formatting rules so clients can rely on exported columns.
+    """
+    return _normalize_series_for_export(df)

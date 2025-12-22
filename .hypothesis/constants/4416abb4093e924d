@@ -1,0 +1,4 @@
+# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/api/v1/routes.py
+# hypothesis_version: 6.148.7
+
+[400, '%.2f', '/compare', '/export', '/simulate', 'balance', 'csv', 'date', 'days', 'events_csv', 'include_events', 'kind', 'meta', 'metrics', 'raw', 'records', 'series_csv', 'series_diff', 'series_format', 'series_json', 'start', 'total_cc_balance', 'total_iou_balance']

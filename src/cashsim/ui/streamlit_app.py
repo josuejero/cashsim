@@ -24,6 +24,7 @@ from cashsim.planning.planner import (
     plan_min_daily_earnings,
     plan_variable_daily_earnings,
 )
+from cashsim.risk import predict_overdraft_risk
 from cashsim.sim.core import simulate_month
 from cashsim.sim.types import SimMetrics
 from cashsim.ui.components import (
@@ -584,16 +585,70 @@ def render_wishlist_tab() -> None:
             st.error(str(e))
 
 
+def render_insights_tab() -> None:
+    dials = dials_from_state()
+
+    st.subheader("Overdraft Risk")
+    horizon = st.number_input("Horizon days", min_value=1, max_value=366, value=30)
+    top_k = st.number_input("Top drivers", min_value=0, max_value=20, value=5)
+
+    try:
+        result = predict_overdraft_risk(
+            dials, start=date.today(), horizon_days=int(horizon), top_k=int(top_k)
+        )
+        st.metric("P(balance < 0)", f"{result.probability:.1%}")
+
+        if result.drivers:
+            st.caption("Top drivers (approximate, logistic regression contributions)")
+            st.dataframe(
+                pd.DataFrame(
+                    [
+                        {
+                            "feature": d.feature,
+                            "value": d.value,
+                            "direction": d.direction,
+                            "contribution": d.contribution,
+                        }
+                        for d in result.drivers
+                    ]
+                )
+            )
+        else:
+            st.info("No driver explanation available for this model type.")
+
+    except FileNotFoundError as e:
+        st.warning(str(e))
+        st.code("dvc repro", language="bash")
+
+
 st.title("CashSim (single-page)")
 st.caption(
     "Edit inputs, bills, debt, and one-offs — then simulate and analyze break-even, "
     "and plan a daily target — all here."
 )
 
-tab_inputs, tab_bills, tab_debt, tab_oneoffs, tab_sim, tab_analytics, tab_planner, tab_wishlist = (
-    st.tabs(
-        ["Inputs", "Bills", "Debt", "One-offs", "Simulation", "Analytics", "Planner", "Wishlist"]
-    )
+(
+    tab_inputs,
+    tab_bills,
+    tab_debt,
+    tab_oneoffs,
+    tab_sim,
+    tab_analytics,
+    tab_planner,
+    tab_wishlist,
+    tab_insights,
+) = st.tabs(
+    [
+        "Inputs",
+        "Bills",
+        "Debt",
+        "One-offs",
+        "Simulation",
+        "Analytics",
+        "Planner",
+        "Wishlist",
+        "Insights",
+    ]
 )
 
 with tab_inputs:
@@ -612,3 +667,5 @@ with tab_planner:
     render_planner_tab()
 with tab_wishlist:
     render_wishlist_tab()
+with tab_insights:
+    render_insights_tab()

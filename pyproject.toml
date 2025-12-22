@@ -17,8 +17,9 @@ dependencies = [
   "python-dateutil>=2.9.0.post0", # relativedelta
   # UI
   "streamlit>=1.49,<2.0",
-  # Streamlit dataframes use Arrow underneath; keep it modern for 3.13 wheels
-  "pyarrow>=22,<23",
+  # Streamlit dataframes use Arrow underneath; keep it modern for 3.13+ wheels.
+  "pyarrow>=22,<23; python_version>='3.13'",
+  "pyarrow>=12,<20; python_version<'3.13'",
   # NEW: Google Sheets integration
   "gspread>=6,<7",
   "google-auth>=2.0",
@@ -45,6 +46,15 @@ dev = [
   "hypothesis>=6.112",
   "great-expectations>=0.18,<0.19",
 
+]
+
+
+ml = [
+  "scikit-learn>=1.5,<2",
+  # mlflow pins pyarrow<20 and doesn't publish wheels for 3.13+ yet.
+  "mlflow>=2.17,<3; python_version<'3.13'",
+  "dvc>=3.50,<4",
+  "matplotlib>=3.9,<4",
 ]
 
 [project.scripts]

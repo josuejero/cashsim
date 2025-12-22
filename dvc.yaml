@@ -1,0 +1,56 @@
+stages:
+  risk_synth:
+    cmd: >
+      python -m cashsim.ml.synth
+      --out data/synth/risk.parquet
+      --meta artifacts/risk/synth_meta.json
+    deps:
+      - src/cashsim/ml/synth.py
+      - src/cashsim/ml/features.py
+      - src/cashsim/sim/core.py
+      - src/cashsim/models.py
+    params:
+      - risk.seed
+      - risk.n_samples
+      - risk.horizon_days
+      - risk.start_date
+    outs:
+      - data/synth/risk.parquet
+      - artifacts/risk/synth_meta.json
+
+  risk_train:
+    cmd: >
+      python -m cashsim.ml.train
+      --data data/synth/risk.parquet
+      --model artifacts/risk/model.joblib
+      --feature-names artifacts/risk/feature_names.json
+      --meta artifacts/risk/training_meta.json
+    deps:
+      - src/cashsim/ml/train.py
+      - src/cashsim/ml/features.py
+      - data/synth/risk.parquet
+    params:
+      - risk.seed
+      - risk.test_size
+      - risk.model_type
+      - risk.logreg
+      - risk.gbdt
+    outs:
+      - artifacts/risk/model.joblib
+      - artifacts/risk/feature_names.json
+      - artifacts/risk/training_meta.json
+
+  risk_eval:
+    cmd: >
+      python -m cashsim.ml.evaluate
+      --data data/synth/risk.parquet
+      --model artifacts/risk/model.joblib
+      --outdir artifacts/risk/eval
+    deps:
+      - src/cashsim/ml/evaluate.py
+      - src/cashsim/ml/features.py
+      - data/synth/risk.parquet
+      - artifacts/risk/model.joblib
+    metrics:
+      - artifacts/risk/eval/metrics.json:
+          cache: false

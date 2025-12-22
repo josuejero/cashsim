@@ -19,6 +19,7 @@ from cashsim.io.config_io import load_config
 from cashsim.io.csv_import import import_input_tables
 from cashsim.io.csv_tables import export_input_tables
 from cashsim.io.exporters import metrics_to_dict, write_run
+from cashsim.risk import predict_overdraft_risk
 
 APP_HELP = (
     "CashSim CLI. Use `cashsim ui` for the Streamlit app and "
@@ -127,6 +128,23 @@ THRESHOLD_OPTION = typer.Option(
     "--threshold",
     min=0,
     help="Threshold used by series_summary to flag first divergence.",
+)
+RISK_HORIZON_OPTION = typer.Option(
+    30,
+    "--horizon-days",
+    min=1,
+    max=366,
+)
+RISK_MODEL_OPTION = typer.Option(
+    Path("artifacts/risk/model.joblib"),
+    "--model",
+    exists=False,
+)
+RISK_TOP_K_OPTION = typer.Option(
+    5,
+    "--top-k",
+    min=0,
+    max=20,
 )
 
 
@@ -346,6 +364,41 @@ def import_cmd(
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(dials.model_dump_json(indent=2) + "\n", encoding="utf-8")
     typer.echo(f"Wrote config: {out.resolve()}")
+
+
+@app.command()
+def risk(
+    config: Path = CONFIG_OPTION,
+    start: str = START_OPTION,
+    horizon_days: int = RISK_HORIZON_OPTION,
+    model: Path = RISK_MODEL_OPTION,
+    top_k: int = RISK_TOP_K_OPTION,
+) -> None:
+    """Estimate overdraft risk P(balance < 0 within N days)."""
+    s = _parse_date(start)
+    run = run_from_config(config=config, start=s, days=horizon_days)
+    result = predict_overdraft_risk(
+        run.dials,
+        start=s,
+        horizon_days=horizon_days,
+        model_path=model,
+        top_k=top_k,
+    )
+
+    payload = {
+        "probability": result.probability,
+        "horizon_days": result.horizon_days,
+        "drivers": [
+            {
+                "feature": d.feature,
+                "contribution": d.contribution,
+                "direction": d.direction,
+                "value": d.value,
+            }
+            for d in result.drivers
+        ],
+    }
+    typer.echo(json.dumps(payload, indent=2))
 
 
 def main() -> None:

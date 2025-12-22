@@ -82,3 +82,25 @@ class ExportResponse(BaseModel):
 
     # Present only if include_events=true
     events_csv: str | None = None
+
+
+class RiskRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    dials: Dials
+    start: date
+    horizon_days: int = Field(30, ge=1, le=366)
+    top_k: int = Field(5, ge=0, le=20)
+
+
+class RiskDriverOut(BaseModel):
+    feature: str
+    contribution: float
+    direction: Literal["increases", "decreases"]
+    value: float
+
+
+class RiskResponse(BaseModel):
+    probability: float
+    horizon_days: int
+    drivers: list[RiskDriverOut]

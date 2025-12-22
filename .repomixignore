@@ -4,3 +4,5 @@
 # tmp/
 .streamlit/secrets.toml
 monkeytype.sqlite3
+*.svg
+artifacts/data_docs/

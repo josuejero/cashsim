@@ -5,7 +5,8 @@ pydantic>=2.10,<3
 pandas>=2.2.3,<3.0
 python-dateutil>=2.9.0.post0
 streamlit>=1.49,<2.0
-pyarrow>=21,<22
+pyarrow>=22,<23; python_version>="3.13"
+pyarrow>=12,<20; python_version<"3.13"
 gspread>=6,<7
 google-auth>=2.0
 gspread-dataframe>=2.0.0

@@ -7,6 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 from cashsim.io.config_io import load_config
+from cashsim.models import Dials
 from cashsim.sim.core import simulate_month
 from cashsim.sim.types import SimMetrics
 
@@ -14,6 +15,7 @@ from cashsim.sim.types import SimMetrics
 @dataclass(frozen=True)
 class RunResult:
     config_path: Path
+    dials: Dials
     start: date
     days: int
     df: pd.DataFrame
@@ -25,6 +27,7 @@ def run_from_config(*, config: Path, start: date, days: int) -> RunResult:
     df, metrics = simulate_month(dials, start=start, days=days)
     return RunResult(
         config_path=Path(config).resolve(),
+        dials=dials,
         start=start,
         days=days,
         df=df,

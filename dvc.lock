@@ -1,0 +1,102 @@
+schema: '2.0'
+stages:
+  risk_synth:
+    cmd: "python -m cashsim.ml.synth --out data/synth/risk.parquet --meta artifacts/risk/synth_meta.json\n"
+    deps:
+    - path: src/cashsim/ml/features.py
+      hash: md5
+      md5: b192f536ae4b7413815e48f250fcd586
+      size: 2284
+    - path: src/cashsim/ml/synth.py
+      hash: md5
+      md5: b0954536e5d93273fbac048da5e3c412
+      size: 5420
+    - path: src/cashsim/models.py
+      hash: md5
+      md5: ca3080fc090889cffb70e255842e7187
+      size: 2712
+    - path: src/cashsim/sim/core.py
+      hash: md5
+      md5: 2597260c6d4be449081b7f58cdfe8b28
+      size: 11967
+    params:
+      params.yaml:
+        risk.horizon_days: 30
+        risk.n_samples: 1000
+        risk.seed: 1337
+        risk.start_date: '2025-01-01'
+    outs:
+    - path: artifacts/risk/synth_meta.json
+      hash: md5
+      md5: 32bdbeba9ab1ab0ad4aaf338fbe829bc
+      size: 443
+    - path: data/synth/risk.parquet
+      hash: md5
+      md5: ffa64b1688a1bb02a9596a11949d6b18
+      size: 62734
+  risk_train:
+    cmd: "python -m cashsim.ml.train --data data/synth/risk.parquet --model artifacts/risk/model.joblib
+      --feature-names artifacts/risk/feature_names.json --meta artifacts/risk/training_meta.json\n"
+    deps:
+    - path: data/synth/risk.parquet
+      hash: md5
+      md5: ffa64b1688a1bb02a9596a11949d6b18
+      size: 62734
+    - path: src/cashsim/ml/features.py
+      hash: md5
+      md5: b192f536ae4b7413815e48f250fcd586
+      size: 2284
+    - path: src/cashsim/ml/train.py
+      hash: md5
+      md5: ed0b838ff1ed651ccd6c279e6a3418fa
+      size: 4458
+    params:
+      params.yaml:
+        risk.gbdt:
+          n_estimators: 300
+          max_depth: 3
+          learning_rate: 0.05
+        risk.logreg:
+          C: 1.0
+          max_iter: 2000
+        risk.model_type: logreg
+        risk.seed: 1337
+        risk.test_size: 0.2
+    outs:
+    - path: artifacts/risk/feature_names.json
+      hash: md5
+      md5: e80a73e3d422a63c6e30a3e5c66881e8
+      size: 244
+    - path: artifacts/risk/model.joblib
+      hash: md5
+      md5: a4219906db0afb0e54d4fa1f54a2030e
+      size: 2161
+    - path: artifacts/risk/training_meta.json
+      hash: md5
+      md5: 4311603f85bc67392a27b85840bdd62c
+      size: 367
+  risk_eval:
+    cmd: "python -m cashsim.ml.evaluate --data data/synth/risk.parquet --model artifacts/risk/model.joblib
+      --outdir artifacts/risk/eval\n"
+    deps:
+    - path: artifacts/risk/model.joblib
+      hash: md5
+      md5: a4219906db0afb0e54d4fa1f54a2030e
+      size: 2161
+    - path: data/synth/risk.parquet
+      hash: md5
+      md5: ffa64b1688a1bb02a9596a11949d6b18
+      size: 62734
+    - path: src/cashsim/ml/evaluate.py
+      hash: md5
+      md5: e3fbe910c38bbfad7aee3c30e7626e52
+      size: 1803
+    - path: src/cashsim/ml/features.py
+      hash: md5
+      md5: b192f536ae4b7413815e48f250fcd586
+      size: 2284
+    outs:
+    - path: artifacts/risk/eval/metrics.json
+      hash: md5
+      md5: 06d7a0af12eea1300e6878d487702efc
+      size: 1027

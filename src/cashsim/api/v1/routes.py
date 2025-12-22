@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 
 from cashsim.compare import build_compare_payload, series_diff
 from cashsim.io.exporters import EVENT_COLUMNS, metrics_to_dict, normalize_series_for_export
+from cashsim.risk import predict_overdraft_risk
 from cashsim.sim.core import simulate_month
 
 from .schemas import (
@@ -15,6 +16,9 @@ from .schemas import (
     CompareResponse,
     ExportRequest,
     ExportResponse,
+    RiskDriverOut,
+    RiskRequest,
+    RiskResponse,
     SimMetricsWire,
     SimulateRequest,
     SimulateResponse,
@@ -94,6 +98,29 @@ def simulate(req: SimulateRequest) -> SimulateResponse:
     return SimulateResponse(
         metrics=SimMetricsWire.model_validate(metrics_to_dict(metrics)),
         series=_series_records_raw(df),
+    )
+
+
+@router.post("/risk", response_model=RiskResponse)
+def risk(req: RiskRequest) -> RiskResponse:
+    result = predict_overdraft_risk(
+        req.dials,
+        start=req.start,
+        horizon_days=req.horizon_days,
+        top_k=req.top_k,
+    )
+    return RiskResponse(
+        probability=result.probability,
+        horizon_days=result.horizon_days,
+        drivers=[
+            RiskDriverOut(
+                feature=d.feature,
+                contribution=d.contribution,
+                direction=d.direction,
+                value=d.value,
+            )
+            for d in result.drivers
+        ],
     )
 
 

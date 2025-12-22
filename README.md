@@ -33,7 +33,7 @@ Most “toy” simulators are either hard to reproduce or hard to extend. CashSi
 If you’re reviewing this repo for a specific role, here’s where to look first:
 
 - **Software Engineer / Developer**: core domain logic, interfaces, tests, and code structure  
-  → `src/` (or equivalent), `tests/`, `docs/architecture.md`
+  → `src/`, `tests/`, `docs/architecture.md`
 - **AI / ML Engineer**: training pipeline, evaluation, experiment tracking, inference entrypoints  
   → `ml/`, `pipelines/`, `models/`, `scripts/train.*`, `scripts/evaluate.*`
 - **Data Scientist / Analyst**: notebooks, EDA, metrics, assumptions, and reporting  

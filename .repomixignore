@@ -1,8 +1,0 @@
-# Add patterns to ignore here, one per line
-# Example:
-# *.log
-# tmp/
-.streamlit/secrets.toml
-monkeytype.sqlite3
-*.svg
-artifacts/data_docs/

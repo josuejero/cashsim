@@ -59,3 +59,5 @@ run.json
 
 # Streamlit secrets (don’t commit)
 .streamlit/secrets.toml
+repomix-output.xml
+.repomixignore

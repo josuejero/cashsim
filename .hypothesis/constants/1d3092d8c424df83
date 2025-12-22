@@ -1,4 +1,0 @@
-# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/analytics/snapshot.py
-# hypothesis_version: 6.148.7
-
-[0.0, '%Y-%m', 'M', 'annualized_leftover', 'est_gas', 'est_income', 'events', 'first_date', 'gas', 'income', 'last_date', 'leftover', 'month', 'total_bills', 'workday_count']

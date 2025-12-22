@@ -1,4 +1,0 @@
-# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/scripts/gx_validate_inputs.py
-# hypothesis_version: 6.148.7
-
-[-1000000000000.0, 0.01, 1000000000000.0, 1000, '--inputs', '.csv', '__main__', 'amount', 'apr', 'balance', 'bills.csv', 'cashsim.bills.v1', 'cashsim.ious.v1', 'cashsim.oneoffs.v1', 'cashsim_inputs', 'category', 'coerce', 'columns', 'credit_cards.csv', 'date', 'due_date', 'due_day', 'file', 'ious.csv', 'min_floor', 'min_pct', 'must_pay', 'name', 'notes', 'oneoffs.csv', 'priority', 'ranges', 'required_non_null', 'transactions.csv', 'usual_day']

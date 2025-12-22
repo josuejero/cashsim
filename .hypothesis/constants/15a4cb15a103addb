@@ -1,4 +1,0 @@
-# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/observability/otel.py
-# hypothesis_version: 6.148.7
-
-['1', 'CASHSIM_OTEL_ENABLED', 'OTEL_EXCLUDED_URLS', 'OTEL_SERVICE_NAME', 'OTEL_SERVICE_VERSION', 'cashsim', 'dev', 'health', 'on', 'service.name', 'service.version', 't', 'true', 'y', 'yes']

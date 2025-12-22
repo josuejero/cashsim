@@ -1,4 +1,0 @@
-# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/sim/core.py
-# hypothesis_version: 6.148.7
-
-[0.0, 1e-09, '%a', '[^a-z0-9_]+', '_', 'adb_days', 'adb_sum', 'avalanche', 'balance', 'bill_due', 'cc_events', 'cc_extra_on_due', 'cc_interest_posted', 'cc_min_paid', 'cycle_due', 'cycle_start', 'date', 'due_simple', 'earn', 'fillups', 'gas_bucket', 'grace_active', 'min_due_locked', 'next_stmt', 'oneoff_contribs', 'oneoff_paid', 'oneoffs', 'payments_since_stmt', 'statement_adb', 'statement_balance', 'total_cc_balance', 'total_iou_balance', 'weekday']

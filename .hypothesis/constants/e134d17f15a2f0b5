@@ -1,4 +1,0 @@
-# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/io/csv_import.py
-# hypothesis_version: 6.148.7
-
-[0.0, 0.02, 25.0, 100, 1000, '0', '1', 'bills', 'bills.csv', 'credit_cards', 'credit_cards.csv', 'dials.json', 'due_day', 'f', 'false', 'ious', 'ious.csv', 'json', 'must_pay', 'n', 'no', 'oneoffs', 'oneoffs.csv', 'records', 't', 'true', 'usual_day', 'utf-8', 'y', 'yes']

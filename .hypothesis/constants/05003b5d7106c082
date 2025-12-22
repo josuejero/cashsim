@@ -1,4 +1,0 @@
-# file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/models.py
-# hypothesis_version: 6.140.3
-
-[0.0, 0.045, 0.07, 7000.0, 'Payment due day', 'amount', 'avalanche', 'due_simple', 'e.g. 0.02 for 2%', 'snowball', 'statement_adb']

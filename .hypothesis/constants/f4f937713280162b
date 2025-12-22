@@ -1,4 +1,0 @@
-# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/cli.py
-# hypothesis_version: 6.148.7
-
-[0.01, 366, 8000, '--a', '--b', '--config', '--days', '--events/--no-events', '--host', '--out', '--overwrite', '--port', '--reload', '--report', '--series-format', '--series/--no-series', '--start', '--threshold', '127.0.0.1', 'Config A (baseline).', 'Output directory.', '__file__', '__main__', 'allow_extra_args', 'cashsim.api.app:app', 'compare.json', 'csv', 'csv|json', 'meta', 'metrics', 'out', 'records', 'run', 'series', 'series_columns', 'series_diff.csv', 'streamlit', 'ui', 'utf-8', 'uvicorn']

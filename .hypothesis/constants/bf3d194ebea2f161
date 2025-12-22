@@ -1,4 +1,0 @@
-# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/observability/logging.py
-# hypothesis_version: 6.148.7
-
-['INFO', 'LOG_FORMAT', 'LOG_LEVEL', 'args', 'created', 'exc_info', 'exc_text', 'filename', 'funcName', 'json', 'level', 'levelname', 'levelno', 'lineno', 'logger', 'module', 'msecs', 'msg', 'name', 'pathname', 'process', 'processName', 'relativeCreated', 'span_id', 'stack_info', 'thread', 'threadName', 'trace_id', 'ts']

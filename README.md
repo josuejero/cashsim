@@ -1,78 +1,218 @@
-
 # CashSim
-
-> Streamlit-powered cash-flow & debt planning simulator with daily scheduling, ADB interest, and “what-if” analytics.
+<!--
+Badges (replace links once you have them)
+[![CI](https://img.shields.io/github/actions/workflow/status/<ORG>/<REPO>/ci.yml?branch=main)](<CI_URL>)
+[![Coverage](https://img.shields.io/codecov/c/github/<ORG>/<REPO>)](<COVERAGE_URL>)
+[![License](https://img.shields.io/github/license/<ORG>/<REPO>)](LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/<ORG>/<REPO>)](https://github.com/<ORG>/<REPO>/commits/main)
+-->
 
 [![CI](https://github.com/josuejero/cashsim/actions/workflows/ci.yml/badge.svg)](https://github.com/josuejero/cashsim/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12+-informational.svg)](#)
 [![Live App](https://img.shields.io/badge/app-live-brightgreen.svg)](https://cashsim.streamlit.app)
 
+A modular cash(-flow) simulation + analytics sandbox designed to be **easy to run**, **easy to verify**, and **easy to extend**.
+Use it to generate scenarios, stress-test assumptions, and produce reproducible outputs for analysis, reporting, or downstream ML/forecasting experiments.
 
 
-## ✨ Features
-- **Single-page Streamlit UI**: inputs, simulation, analytics, planner, wishlist (Google Sheets).
-- **ADB interest math** (Decimal-correct) & due-date postings.
-- **Daily planner**: variable schedule with blackout days and 7-day reserve logic.
-- **Break-even grid & monthly snapshot** analytics.
-- **Google Sheets** wishlist integration via service account.
+---
 
-## 🚀 Quickstart (local)
-````bash
-# 1) Python 3.12+ recommended
-python -m venv .venv && source .venv/bin/activate
+## Why this project exists
+Most “toy” simulators are either hard to reproduce or hard to extend. CashSim focuses on:
+- **Reproducibility**: config-driven runs, deterministic seeds, repeatable outputs
+- **Extensibility**: clear separation between simulation logic, analytics, and ML hooks
+- **Auditability**: simple commands to run, test, and sanity-check results
 
-# 2) Install the package (editable ok)
-pip install -e ".[dev]"     # or: pip install -r requirements.txt
+---
 
-# 3) (Optional) Google Sheets secrets for wishlist tab
-#    Put TOML at: .streamlit/secrets.toml (see docs/SECRETS.md)
+## What you can do with CashSim
+- Run **deterministic** or **Monte Carlo** simulations from a configuration file
+- Generate **scenario outputs** (CSV/Parquet/JSON – depending on your implementation)
+- Compute **summary metrics** (distributions, risk bands, sensitivities)
+- Export analysis-ready artifacts for notebooks/dashboards
+- Train/evaluate forecasting or risk models on simulated and/or real data
 
-# 4) Launch the app
-cashsim               # invokes Streamlit runner under the hood
-# or: streamlit run src/cashsim/ui/streamlit_app.py
-`````
+---
 
-## 🔧 Configuration
+## For employers and reviewers
+If you’re reviewing this repo for a specific role, here’s where to look first:
 
-* Example config: [`examples/configs/sample.json`](examples/configs/sample.json)
-* Local secrets: see [`docs/SECRETS.md`](docs/SECRETS.md)
-  **Never commit secrets.** Use Streamlit Cloud’s Secrets for production.
+- **Software Engineer / Developer**: core domain logic, interfaces, tests, and code structure  
+  → `src/` (or equivalent), `tests/`, `docs/architecture.md`
+- **AI / ML Engineer**: training pipeline, evaluation, experiment tracking, inference entrypoints  
+  → `ml/`, `pipelines/`, `models/`, `scripts/train.*`, `scripts/evaluate.*`
+- **Data Scientist / Analyst**: notebooks, EDA, metrics, assumptions, and reporting  
+  → `notebooks/`, `reports/`, `data_dictionary.md`
+- **DevOps / Cloud Engineer**: containerization, CI, infra-as-code, observability  
+  → `Dockerfile`, `docker-compose.yml`, `.github/workflows/`, `infra/`
 
-## 🧪 Tests
+
+---
+
+## Project structure (example)
+````
+
+.
+├─ src/                  # Simulation + analytics code
+├─ tests/                # Unit/integration tests
+├─ notebooks/            # EDA and reporting notebooks 
+├─ configs/              # Reproducible run configs (YAML/JSON)
+├─ data/                 # Local data (gitignored) or sample data
+├─ scripts/              # CLI entrypoints (run/train/evaluate)
+├─ infra/                # IaC (Terraform/CDK/etc.)
+├─ docs/                 # Architecture + design notes
+└─ README.md
+
+````
+
+---
+
+## Quickstart
+
+### 1) Clone
+````
+git clone https://github.com/josuejero/cashsim.git
+cd cashsim
+````
+
+### 2) Create an environment
+
+Pick the option that matches your stack:
+
+**Python (venv)**
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -U pip
+pip install -r requirements.txt
+```
+
+**Node**
+
+```bash
+npm install
+```
+
+**Docker**
+
+```bash
+docker build -t cashsim .
+docker run --rm -it cashsim --help
+```
+
+
+### 3) Run a simulation
+
+```bash
+# Example CLI (adjust to match your entrypoint)
+python -m cashsim run --config configs/example.yml --seed 42 --out outputs/run_001
+```
+
+---
+
+## Usage
+
+### Configuration
+
+A typical run config includes:
+
+* time horizon / step size
+* starting balances
+* inflows/outflows (distributions + constraints)
+* scenario parameters
+* random seed (for reproducibility)
+
+Example:
+
+```yaml
+# configs/example.yml (illustrative)
+horizon_months: 24
+start_cash: 100000
+seed: 42
+
+inflows:
+  - name: revenue
+    dist: normal
+    mean: 25000
+    std: 5000
+
+outflows:
+  - name: payroll
+    dist: fixed
+    value: 18000
+```
+
+### Outputs
+
+CashSim is designed to produce:
+
+* a **raw time series** (per run / per path)
+* a **summary report** (aggregates, percentiles, worst-case slices)
+* optional artifacts for dashboards or model training
+
+---
+
+## Testing and quality
+
+Run the full test suite:
+
+```bash
+# Python example
 pytest -q
 ```
 
-## 📦 Deploy
+Run linting/type checks (if configured):
 
-### Streamlit Community Cloud (recommended)
+```bash
+# Examples — adjust to your repo
+ruff check .
+mypy .
+```
 
-* Connect repo → set **App file**: `src/cashsim/ui/streamlit_app.py`.
-* Add **Secrets** (paste TOML from `docs/SECRETS.md` template).
-* Optional: set custom subdomain (e.g., `cashsim.streamlit.app`).
+Recommended “one command” checks (if you add a Makefile):
 
-### Hugging Face Spaces (Docker)
+```bash
+make test
+make lint
+make format
+make typecheck
+```
 
-* Create Space (Docker) → add the `Dockerfile` from this repo.
-* Add secrets in Space settings; write them to `.streamlit/secrets.toml` at container start.
+---
 
-### Google Cloud Run
+## Reproducibility checklist
 
-* Build & push container image → **Deploy** to Cloud Run.
-* Mount a Secret Manager secret to `/.streamlit/secrets.toml`.
+* [ ] Runs accept a `--seed` and log it
+* [ ] Config files fully define a run (no hidden defaults)
+* [ ] Outputs include metadata: git commit, config hash, timestamp
+* [ ] Dependencies are pinned (lockfile or pinned requirements)
 
-## 🗺️ Roadmap
+---
 
-* CSV import/export
-* Scenario comparison view
-* CLI subcommands for headless batch simulation
+## Deployment
 
-## 🤝 Contributing
+If you expose CashSim via an API or job runner:
 
-Bug reports & PRs welcome. See **CONTRIBUTING.md**.
+* local: `docker compose up`
+* production: deploy via your platform of choice (Kubernetes, ECS, Cloud Run, etc.)
+* observability: structured logs + metrics + traces where appropriate
 
-## 📝 License
+---
+
+
+## Contributing
+
+Pull requests are welcome. For major changes, please open an issue first to discuss what you’d like to change.
+
+* Keep changes small and well-tested
+* Update docs/config examples when behavior changes
+
+---
+
+## License
 
 MIT — see **LICENSE**.
+
+

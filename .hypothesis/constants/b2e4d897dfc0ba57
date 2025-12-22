@@ -1,4 +1,0 @@
-# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/io/exporters.py
-# hypothesis_version: 6.148.7
-
-['%.2f', ',', ':', '_bal', 'balance', 'bill_due', 'cc_', 'cc_events', 'cc_extra_on_due', 'cc_interest_posted', 'cc_min_paid', 'compare.json', 'config_path', 'csv', 'date', 'days', 'earn', 'events.csv', 'fillups', 'gas_bucket', 'include_events', 'json', 'kind', 'metrics.json', 'object', 'oneoff_contribs', 'oneoff_paid', 'raw', 'records', 'run_meta.json', 'series.csv', 'series.json', 'series_diff.csv', 'series_format', 'start', 'total_cc_balance', 'total_iou_balance', 'utf-8', 'weekday']

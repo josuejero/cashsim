@@ -1,4 +1,0 @@
-# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/scripts/gx_suites.py
-# hypothesis_version: 6.148.7
-
-[-1000000000000.0, 0.01, 1000000000000.0, 1000, '__main__', 'amount', 'apr', 'balance', 'cashsim.bills.v1', 'cashsim.ious.v1', 'cashsim.oneoffs.v1', 'category', 'date', 'due_date', 'due_day', 'file', 'min_floor', 'min_pct', 'must_pay', 'name', 'notes', 'priority', 'usual_day']

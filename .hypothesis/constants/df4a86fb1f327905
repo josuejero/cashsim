@@ -1,4 +1,0 @@
-# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/sim/interest.py
-# hypothesis_version: 6.148.7
-
-[0.0, 365, 'adb_days', 'adb_sum', 'cycle_due', 'min_due_locked', 'next_stmt', 'payments_since_stmt', 'statement_balance']

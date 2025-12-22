@@ -1,4 +1,0 @@
-# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/compare.py
-# hypothesis_version: 6.148.7
-
-[0.0, 0.01, 0.5, '## Category totals', '## Metrics', '## Timeline deltas', '_a', '_b', 'a', 'amount', 'amt', 'b', 'balance', 'bill_due', 'category_totals', 'cc_extra_on_due', 'cc_extra_paid', 'cc_interest_posted', 'cc_min_paid', 'cc_mins_paid', 'coerce', 'cushion_breach_date', 'date', 'days', 'debt_payments_total', 'delta', 'delta_days', 'earn', 'first_negative_date', 'gas_bucket', 'income', 'interest_posted', 'max_abs_delta', 'max_abs_delta_date', 'mean_abs_delta', 'meta', 'metrics', 'min_balance_date', 'non_debt_bills', 'oneoff_paid', 'oneoffs_paid', 'outer', 'rmse', 'series_columns', 'series_summary', 'spend_total', 'start', 'threshold', 'timeline', 'total_cc_balance', 'total_iou_balance', '|---|---:|---:|---:|', '|---|---|---|---:|']

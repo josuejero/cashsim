@@ -1,4 +1,0 @@
-# file: /Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/src/cashsim/io/csv_tables.py
-# hypothesis_version: 6.148.7
-
-['+00:00', 'Int64', 'Z', 'amount', 'apr', 'balance', 'bills', 'bills.csv', 'category', 'credit_cards', 'credit_cards.csv', 'date', 'dials', 'dials.json', 'due_date', 'due_day', 'files', 'generated_at', 'ious', 'ious.csv', 'json', 'manifest', 'manifest.json', 'min_floor', 'min_pct', 'must_pay', 'name', 'notes', 'oneoffs', 'oneoffs.csv', 'priority', 'schema_version', 'transactions', 'transactions.csv', 'usual_day', 'utf-8', 'v1']

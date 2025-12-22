@@ -1,0 +1,21 @@
+{
+  "current_cash": 350.0,
+  "safety_cushion": 200.0,
+  "weekday_earnings": 140.0,
+  "gas_pct": 0.18,
+  "gas_fill_size": 25.0,
+  "bills": [
+    {"name": "Rent", "usual_day": 1, "amount": 850.0},
+    {"name": "Utilities", "usual_day": 15, "amount": 110.0}
+  ],
+  "credit_cards": [
+    {"name": "Card A", "apr": 0.2499, "balance": 1800.0, "limit": 2500.0, "min_pct": 0.03, "statement_day": 20, "due_day": 14},
+    {"name": "Card B", "apr": 0.1799, "balance": 900.0, "limit": 2000.0, "min_pct": 0.03, "statement_day": 10, "due_day": 4}
+  ],
+  "ious": [],
+  "oneoffs": [],
+  "invest": {"enable": false, "hysa_apy": 0.045, "expected_market_return": 0.07, "use_dca": false, "roth_target": 0.0, "trad_target": 0.0, "hysa_target": 0.0, "robinhood_target": 0.0, "ira_year_limit": 7000.0, "roth_ok_today": true},
+  "interest_mode": "statement_adb",
+  "extra_strategy": "avalanche",
+  "blackouts": []
+}

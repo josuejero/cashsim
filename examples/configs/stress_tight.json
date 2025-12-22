@@ -1,0 +1,22 @@
+{
+  "current_cash": 120.0,
+  "safety_cushion": 150.0,
+  "weekday_earnings": 95.0,
+  "gas_pct": 0.20,
+  "gas_fill_size": 25.0,
+  "bills": [
+    {"name": "Rent", "usual_day": 1, "amount": 900.0},
+    {"name": "Insurance", "usual_day": 18, "amount": 140.0}
+  ],
+  "credit_cards": [
+    {"name": "High APR", "apr": 0.2999, "balance": 2200.0, "limit": 2500.0, "min_pct": 0.03, "min_floor": 25.0, "statement_day": 22, "due_day": 16}
+  ],
+  "ious": [],
+  "oneoffs": [
+    {"name": "Car repair", "amount": 400.0, "due_date": "2026-01-10", "start_date": "2025-12-20"}
+  ],
+  "invest": {"enable": false, "hysa_apy": 0.045, "expected_market_return": 0.07, "use_dca": false, "roth_target": 0.0, "trad_target": 0.0, "hysa_target": 0.0, "robinhood_target": 0.0, "ira_year_limit": 7000.0, "roth_ok_today": true},
+  "interest_mode": "statement_adb",
+  "extra_strategy": "avalanche",
+  "blackouts": []
+}

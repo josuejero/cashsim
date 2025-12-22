@@ -1,0 +1,7 @@
+{
+  "config_path": "/Users/wholesway/Documents/Projects-and-Data/Dev/01-personal/CashSim/examples/configs/simple_baseline.json",
+  "days": 31,
+  "include_events": false,
+  "series_format": "json",
+  "start": "2025-01-01"
+}

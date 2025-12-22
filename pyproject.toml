@@ -18,11 +18,13 @@ dependencies = [
   # UI
   "streamlit>=1.49,<2.0",
   # Streamlit dataframes use Arrow underneath; keep it modern for 3.13 wheels
-  "pyarrow>=21,<22",
+  "pyarrow>=22,<23",
   # NEW: Google Sheets integration
   "gspread>=6,<7",
   "google-auth>=2.0",
-  "gspread-dataframe>=2.0.0"
+  "gspread-dataframe>=2.0.0",
+  "typer>=0.12,<1.0",
+
 ]
 
 [project.optional-dependencies]

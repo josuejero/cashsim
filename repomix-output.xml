@@ -68,10 +68,15 @@ The content is organized as follows:
     eb6d189fc4afb526
     f1296bf796213b43
 docs/
+  cli.md
   SECRETS.md
 examples/
   configs/
+    debt_payoff.json
     sample.json
+    simple_baseline.json
+    stress_tight.fixed.json
+    stress_tight.json
 src/
   cashsim/
     analytics/
@@ -81,6 +86,7 @@ src/
     io/
       __init__.py
       config_io.py
+      exporters.py
       gsheets.py
     planning/
       __init__.py
@@ -108,10 +114,16 @@ src/
     __init__.py
     __main__.py
     _typing_shims.py
+    batch.py
     cli.py
+    compare.py
     constants.py
     models.py
 tests/
+  integration/
+    test_cli_compare.py
+    test_cli_determinism.py
+    test_cli_export.py
   test_interest_decimal.py
   test_property_adb.py
 .gitignore
@@ -126,10 +138,1192 @@ pyrightconfig.json
 README.md
 repomix.config.json
 requirements.txt
+run.json
 </directory_structure>
 
 <files>
 This section contains the contents of the repository's files.
+
+<file path="docs/cli.md">
+# CLI (Batch Mode)
+
+## Install
+`pip install -e ".[dev]"`
+
+## Export a run
+`cashsim export --config examples/configs/simple_baseline.json --start 2025-01-01 --days 31 --out out/simple --series-format csv`
+
+Artifacts:
+- out/simple/metrics.json
+- out/simple/series.csv
+- out/simple/run_meta.json
+
+## Compare two scenarios
+`cashsim compare --a examples/configs/simple_baseline.json --b examples/configs/stress_tight.json --start 2025-01-01 --days 31 --out out/compare`
+
+Artifacts:
+- out/compare/compare.json
+</file>
+
+<file path="examples/configs/debt_payoff.json">
+{
+  "current_cash": 350.0,
+  "safety_cushion": 200.0,
+  "weekday_earnings": 140.0,
+  "gas_pct": 0.18,
+  "gas_fill_size": 25.0,
+  "bills": [
+    {"name": "Rent", "usual_day": 1, "amount": 850.0},
+    {"name": "Utilities", "usual_day": 15, "amount": 110.0}
+  ],
+  "credit_cards": [
+    {"name": "Card A", "apr": 0.2499, "balance": 1800.0, "limit": 2500.0, "min_pct": 0.03, "statement_day": 20, "due_day": 14},
+    {"name": "Card B", "apr": 0.1799, "balance": 900.0, "limit": 2000.0, "min_pct": 0.03, "statement_day": 10, "due_day": 4}
+  ],
+  "ious": [],
+  "oneoffs": [],
+  "invest": {"enable": false, "hysa_apy": 0.045, "expected_market_return": 0.07, "use_dca": false, "roth_target": 0.0, "trad_target": 0.0, "hysa_target": 0.0, "robinhood_target": 0.0, "ira_year_limit": 7000.0, "roth_ok_today": true},
+  "interest_mode": "statement_adb",
+  "extra_strategy": "avalanche",
+  "blackouts": []
+}
+</file>
+
+<file path="examples/configs/simple_baseline.json">
+{
+  "current_cash": 500.0,
+  "safety_cushion": 250.0,
+  "weekday_earnings": 120.0,
+  "gas_pct": 0.15,
+  "gas_fill_size": 25.0,
+  "bills": [
+    {"name": "Phone", "usual_day": 5, "amount": 60.0},
+    {"name": "Internet", "usual_day": 12, "amount": 55.0},
+    {"name": "Rent", "usual_day": 1, "amount": 900.0}
+  ],
+  "credit_cards": [],
+  "ious": [],
+  "oneoffs": [],
+  "invest": {"enable": false, "hysa_apy": 0.045, "expected_market_return": 0.07, "use_dca": false, "roth_target": 0.0, "trad_target": 0.0, "hysa_target": 0.0, "robinhood_target": 0.0, "ira_year_limit": 7000.0, "roth_ok_today": true},
+  "interest_mode": "statement_adb",
+  "extra_strategy": "avalanche",
+  "blackouts": []
+}
+</file>
+
+<file path="examples/configs/stress_tight.fixed.json">
+{
+  "current_cash": 120.0,
+  "safety_cushion": 150.0,
+  "weekday_earnings": 95.0,
+  "gas_pct": 0.20,
+  "gas_fill_size": 25.0,
+  "bills": [
+    {"name": "Rent", "usual_day": 1, "amount": 900.0},
+    {"name": "Insurance", "usual_day": 18, "amount": 140.0}
+  ],
+  "credit_cards": [
+    {"name": "High APR", "apr": 0.2999, "balance": 2200.0, "limit": 2500.0, "min_pct": 0.03, "min_floor": 25.0, "statement_day": 22, "due_day": 16}
+  ],
+  "ious": [],
+  "oneoffs": [
+    {"name": "Car repair", "amount": 400.0, "due_date": "2026-01-10", "start_date": "2025-12-20"}
+  ],
+  "invest": {"enable": false, "hysa_apy": 0.045, "expected_market_return": 0.07, "use_dca": false, "roth_target": 0.0, "trad_target": 0.0, "hysa_target": 0.0, "robinhood_target": 0.0, "ira_year_limit": 7000.0, "roth_ok_today": true},
+  "interest_mode": "statement_adb",
+  "extra_strategy": "avalanche",
+  "blackouts": []
+}
+</file>
+
+<file path="examples/configs/stress_tight.json">
+{
+  "current_cash": 120.0,
+  "safety_cushion": 150.0,
+  "weekday_earnings": 95.0,
+  "gas_pct": 0.20,
+  "gas_fill_size": 25.0,
+  "bills": [
+    {"name": "Rent", "usual_day": 1, "amount": 900.0},
+    {"name": "Insurance", "usual_day": 18, "amount": 140.0}
+  ],
+  "credit_cards": [
+    {"name": "High APR", "apr": 0.2999, "balance": 2200.0, "limit": 2500.0, "min_pct": 0.03, "min_floor": 25.0, "statement_day": 22, "due_day": 16}
+  ],
+  "ious": [],
+  "oneoffs": [
+    {"name": "Car repair", "amount": 400.0, "due_date": "2026-01-10", "start_date": "2025-12-20"}
+  ],
+  "invest": {"enable": false, "hysa_apy": 0.045, "expected_market_return": 0.07, "use_dca": false, "roth_target": 0.0, "trad_target": 0.0, "hysa_target": 0.0, "robinhood_target": 0.0, "ira_year_limit": 7000.0, "roth_ok_today": true},
+  "interest_mode": "statement_adb",
+  "extra_strategy": "avalanche",
+  "blackouts": []
+}
+</file>
+
+<file path="src/cashsim/io/exporters.py">
+from __future__ import annotations
+
+import json
+import math
+from dataclasses import asdict
+from datetime import date, datetime
+from pathlib import Path
+from typing import Final
+
+import pandas as pd
+
+from cashsim.sim.types import SimMetrics
+
+EVENT_COLUMNS: Final[tuple[str, ...]] = (
+    "cc_events",
+    "cc_interest_posted",
+    "cc_min_paid",
+    "cc_extra_on_due",
+    "oneoff_contribs",
+    "oneoff_paid",
+)
+
+
+def _json_default(obj: object) -> str:
+    if isinstance(obj, (date, datetime)):
+        return obj.isoformat()
+    return str(obj)
+
+
+def _is_missing(value: object) -> bool:
+    return (
+        value is None
+        or value is pd.NA
+        or (isinstance(value, float) and math.isnan(value))
+    )
+
+
+def _dump_cell_json(value: object) -> str:
+    payload = [] if _is_missing(value) else value
+    return json.dumps(payload, separators=(",", ":"), default=_json_default)
+
+
+def metrics_to_dict(metrics: SimMetrics) -> dict[str, object]:
+    raw = asdict(metrics)
+    out: dict[str, object] = {}
+    for k, v in raw.items():
+        out[k] = v.isoformat() if isinstance(v, date) else v
+    return out
+
+
+def write_metrics_json(metrics: SimMetrics, path: Path) -> None:
+    payload = metrics_to_dict(metrics)
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def write_series(df: pd.DataFrame, path: Path, *, fmt: str) -> None:
+    fmt_norm = fmt.lower().strip()
+    if fmt_norm not in {"csv", "json"}:
+        raise ValueError("series_format must be 'csv' or 'json'")
+
+    if fmt_norm == "csv":
+        out = df.copy()
+        for col in EVENT_COLUMNS:
+            if col in out.columns and out[col].dtype == "object":
+                out[col] = out[col].apply(_dump_cell_json)
+        out.to_csv(path, index=False, lineterminator="\n")
+        return
+
+    records = df.to_dict(orient="records")
+    path.write_text(
+        json.dumps(records, indent=2, sort_keys=True, default=_json_default) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _normalize_scalar(value: object) -> object:
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    return value
+
+
+def write_events_csv(df: pd.DataFrame, path: Path) -> None:
+    if "cc_events" not in df.columns:
+        raise ValueError("Expected 'cc_events' column in series")
+
+    rows: list[dict[str, object]] = []
+    for day, events in df[["date", "cc_events"]].itertuples(index=False):
+        day_str = day.isoformat() if isinstance(day, date) else str(day)
+        event_list = [] if _is_missing(events) else list(events)
+
+        for ev in event_list:
+            row: dict[str, object] = {"sim_date": day_str}
+            for k, v in ev.items():
+                row[k] = _normalize_scalar(v)
+            rows.append(row)
+
+    out = pd.DataFrame.from_records(rows)
+    out.to_csv(path, index=False, lineterminator="\n")
+
+
+def write_run(
+    *,
+    df: pd.DataFrame,
+    metrics: SimMetrics,
+    out_dir: Path,
+    series_format: str,
+    events: bool,
+    overwrite: bool,
+) -> None:
+    out_dir = out_dir.resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    series_ext = series_format.lower().strip()
+    series_path = out_dir / f"series.{series_ext}"
+    metrics_path = out_dir / "metrics.json"
+    events_path = out_dir / "events.csv"
+
+    existing = [p for p in [series_path, metrics_path, events_path] if p.exists()]
+    if existing and not overwrite:
+        raise ValueError(
+            f"Refusing to overwrite existing artifacts in {out_dir} (use --overwrite)"
+        )
+
+    write_series(df, series_path, fmt=series_format)
+    write_metrics_json(metrics, metrics_path)
+
+    if events:
+        write_events_csv(df, events_path)
+</file>
+
+<file path="src/cashsim/batch.py">
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date
+from pathlib import Path
+
+import pandas as pd
+
+from cashsim.io.config_io import load_config
+from cashsim.sim.core import simulate_month
+from cashsim.sim.types import SimMetrics
+
+
+@dataclass(frozen=True, slots=True)
+class RunResult:
+    config_path: Path
+    start: date
+    days: int
+    df: pd.DataFrame
+    metrics: SimMetrics
+
+
+def run_from_config(*, config: Path, start: date, days: int) -> RunResult:
+    dials = load_config(config)
+    df, metrics = simulate_month(dials, start=start, days=days)
+    return RunResult(
+        config_path=Path(config).resolve(),
+        start=start,
+        days=days,
+        df=df,
+        metrics=metrics,
+    )
+</file>
+
+<file path="src/cashsim/compare.py">
+from __future__ import annotations
+
+from dataclasses import asdict
+from datetime import date, datetime
+from typing import Final
+
+import pandas as pd
+
+from cashsim.sim.types import SimMetrics
+
+_DATE_KEYS: Final[set[str]] = {
+    "min_balance_date",
+    "first_negative_date",
+    "friend_ask_latest_date",
+    "cushion_breach_date",
+}
+
+
+def _json_friendly(value: object) -> object:
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    return value
+
+
+def metrics_delta(a: SimMetrics, b: SimMetrics) -> dict[str, object]:
+    """Return a stable, JSON-friendly metrics comparison payload (A vs B)."""
+    da = asdict(a)
+    db = asdict(b)
+
+    out: dict[str, object] = {}
+    for k in da:
+        va = da[k]
+        vb = db.get(k)
+
+        if k in _DATE_KEYS:
+            out[k] = {"a": _json_friendly(va), "b": _json_friendly(vb), "delta": None}
+            continue
+
+        if isinstance(va, (int, float)) and isinstance(vb, (int, float)):
+            out[k] = {
+                "a": round(float(va), 2),
+                "b": round(float(vb), 2),
+                "delta": round(float(vb) - float(va), 2),
+            }
+            continue
+
+        out[k] = {"a": _json_friendly(va), "b": _json_friendly(vb), "delta": None}
+
+    return out
+
+
+def series_diff(
+    df_a: pd.DataFrame,
+    df_b: pd.DataFrame,
+    *,
+    columns: list[str],
+    on: str = "date",
+) -> pd.DataFrame:
+    """Align two daily series on `on` and compute per-column deltas (B - A)."""
+    missing_a = [c for c in [on, *columns] if c not in df_a.columns]
+    missing_b = [c for c in [on, *columns] if c not in df_b.columns]
+    if missing_a or missing_b:
+        raise ValueError(f"Missing columns: a={missing_a}, b={missing_b}")
+
+    a = df_a[[on, *columns]].copy()
+    b = df_b[[on, *columns]].copy()
+
+    a = a.rename(columns={c: f"{c}_a" for c in columns})
+    b = b.rename(columns={c: f"{c}_b" for c in columns})
+
+    merged = a.merge(b, on=on, how="inner")
+
+    for c in columns:
+        merged[f"{c}_delta"] = merged[f"{c}_b"] - merged[f"{c}_a"]
+
+    ordered_cols: list[str] = [on]
+    for c in columns:
+        ordered_cols.extend([f"{c}_a", f"{c}_b", f"{c}_delta"])
+
+    return merged[ordered_cols]
+</file>
+
+<file path="tests/integration/test_cli_compare.py">
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from typer.testing import CliRunner
+
+from cashsim.cli import app
+
+runner = CliRunner()
+
+
+def _write_config(path: Path, payload: dict[str, object]) -> None:
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+
+def test_cli_compare_writes_compare_json(tmp_path: Path) -> None:
+    a = tmp_path / "a.json"
+    b = tmp_path / "b.json"
+    out = tmp_path / "out"
+
+    base: dict[str, object] = {
+        "current_cash": 120.0,
+        "safety_cushion": 150.0,
+        "weekday_earnings": 95.0,
+        "gas_pct": 0.20,
+        "gas_fill_size": 25.0,
+        "bills": [{"name": "Rent", "usual_day": 1, "amount": 900.0}],
+        "credit_cards": [
+            {
+                "name": "High APR",
+                "apr": 0.2999,
+                "balance": 2200.0,
+                "limit": 2500.0,
+                "min_pct": 0.03,
+                "min_floor": 25.0,
+                "statement_day": 22,
+                "due_day": 16,
+            }
+        ],
+        "ious": [],
+        "oneoffs": [],
+        "invest": {
+            "enable": False,
+            "hysa_apy": 0.045,
+            "expected_market_return": 0.07,
+            "use_dca": False,
+            "roth_target": 0.0,
+            "trad_target": 0.0,
+            "hysa_target": 0.0,
+            "robinhood_target": 0.0,
+            "ira_year_limit": 7000.0,
+            "roth_ok_today": True,
+        },
+        "interest_mode": "statement_adb",
+        "extra_strategy": "avalanche",
+        "blackouts": [],
+    }
+
+    cand = dict(base)
+    cand["current_cash"] = 200.0
+
+    _write_config(a, base)
+    _write_config(b, cand)
+
+    res = runner.invoke(
+        app,
+        [
+            "compare",
+            "--a",
+            str(a),
+            "--b",
+            str(b),
+            "--start",
+            "2025-01-01",
+            "--days",
+            "10",
+            "--out",
+            str(out),
+            "--overwrite",
+        ],
+    )
+    assert res.exit_code == 0, res.stdout
+
+    compare_path = out / "compare.json"
+    assert compare_path.exists()
+
+    payload = json.loads(compare_path.read_text(encoding="utf-8"))
+    assert "min_balance" in payload
+</file>
+
+<file path="tests/integration/test_cli_determinism.py">
+from __future__ import annotations
+
+import filecmp
+import json
+from pathlib import Path
+
+from typer.testing import CliRunner
+
+from cashsim.cli import app
+
+runner = CliRunner()
+
+
+def _write_config(path: Path, payload: dict[str, object]) -> None:
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+
+def test_export_is_deterministic(tmp_path: Path) -> None:
+    cfg = tmp_path / "cfg.json"
+    out1 = tmp_path / "out1"
+    out2 = tmp_path / "out2"
+
+    payload: dict[str, object] = {
+        "current_cash": 120.0,
+        "safety_cushion": 150.0,
+        "weekday_earnings": 95.0,
+        "gas_pct": 0.20,
+        "gas_fill_size": 25.0,
+        "bills": [{"name": "Rent", "usual_day": 1, "amount": 900.0}],
+        "credit_cards": [],
+        "ious": [],
+        "oneoffs": [],
+        "invest": {
+            "enable": False,
+            "hysa_apy": 0.045,
+            "expected_market_return": 0.07,
+            "use_dca": False,
+            "roth_target": 0.0,
+            "trad_target": 0.0,
+            "hysa_target": 0.0,
+            "robinhood_target": 0.0,
+            "ira_year_limit": 7000.0,
+            "roth_ok_today": True,
+        },
+        "interest_mode": "statement_adb",
+        "extra_strategy": "avalanche",
+        "blackouts": [],
+    }
+
+    _write_config(cfg, payload)
+
+    args = [
+        "export",
+        "--config",
+        str(cfg),
+        "--start",
+        "2025-01-01",
+        "--days",
+        "10",
+        "--series-format",
+        "csv",
+    ]
+
+    r1 = runner.invoke(app, args + ["--out", str(out1), "--overwrite"])
+    assert r1.exit_code == 0, r1.stdout
+
+    r2 = runner.invoke(app, args + ["--out", str(out2), "--overwrite"])
+    assert r2.exit_code == 0, r2.stdout
+
+    assert filecmp.cmp(out1 / "series.csv", out2 / "series.csv", shallow=False)
+    assert filecmp.cmp(out1 / "metrics.json", out2 / "metrics.json", shallow=False)
+</file>
+
+<file path="tests/integration/test_cli_export.py">
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from typer.testing import CliRunner
+
+from cashsim.cli import app
+
+
+def _write_config(tmp: Path) -> Path:
+    cfg = {
+        "current_cash": 300.0,
+        "safety_cushion": 150.0,
+        "weekday_earnings": 120.0,
+        "gas_pct": 0.15,
+        "gas_fill_size": 25.0,
+        "bills": [{"name": "Rent", "usual_day": 1, "amount": 500.0}],
+        "credit_cards": [],
+        "ious": [],
+        "oneoffs": [],
+        "invest": {
+            "enable": False,
+            "hysa_apy": 0.045,
+            "expected_market_return": 0.07,
+            "use_dca": False,
+            "roth_target": 0.0,
+            "trad_target": 0.0,
+            "hysa_target": 0.0,
+            "robinhood_target": 0.0,
+            "ira_year_limit": 7000.0,
+            "roth_ok_today": True,
+        },
+        "interest_mode": "statement_adb",
+        "extra_strategy": "avalanche",
+        "blackouts": [],
+    }
+    p = tmp / "cfg.json"
+    p.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+    return p
+
+
+def test_cli_export_writes_artifacts(tmp_path: Path) -> None:
+    runner = CliRunner()
+    cfg = _write_config(tmp_path)
+    out = tmp_path / "out"
+
+    result = runner.invoke(
+        app,
+        [
+            "export",
+            "--config",
+            str(cfg),
+            "--start",
+            "2025-01-01",
+            "--days",
+            "10",
+            "--out",
+            str(out),
+            "--series-format",
+            "csv",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stdout
+    assert (out / "metrics.json").exists()
+    assert (out / "series.csv").exists()
+    assert (out / "run_meta.json").exists()
+</file>
+
+<file path="run.json">
+{
+  "metrics": {
+    "min_balance": -298.0,
+    "min_balance_date": "2025-01-01",
+    "first_negative_date": "2025-01-01",
+    "total_upcoming_bills": 1015.0,
+    "friend_ask_needed": 298.0,
+    "friend_ask_latest_date": "2025-01-01",
+    "cushion_breach_date": "2025-01-01",
+    "accrued_interest_estimate": 0
+  },
+  "series": [
+    {
+      "date": "2025-01-01",
+      "weekday": "Wed",
+      "earn": 120.0,
+      "bill_due": 900.0,
+      "balance": -298.0,
+      "gas_bucket": 18.0,
+      "fillups": 0,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-02",
+      "weekday": "Thu",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": -221.0,
+      "gas_bucket": 11.0,
+      "fillups": 1,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-03",
+      "weekday": "Fri",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": -144.0,
+      "gas_bucket": 4.0,
+      "fillups": 1,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-04",
+      "weekday": "Sat",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": -42.0,
+      "gas_bucket": 22.0,
+      "fillups": 0,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-05",
+      "weekday": "Sun",
+      "earn": 120.0,
+      "bill_due": 60.0,
+      "balance": -25.0,
+      "gas_bucket": 15.0,
+      "fillups": 1,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-06",
+      "weekday": "Mon",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 52.0,
+      "gas_bucket": 8.0,
+      "fillups": 1,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-07",
+      "weekday": "Tue",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 129.0,
+      "gas_bucket": 1.0,
+      "fillups": 1,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-08",
+      "weekday": "Wed",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 231.0,
+      "gas_bucket": 19.0,
+      "fillups": 0,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-09",
+      "weekday": "Thu",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 308.0,
+      "gas_bucket": 12.0,
+      "fillups": 1,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-10",
+      "weekday": "Fri",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 385.0,
+      "gas_bucket": 5.0,
+      "fillups": 1,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-11",
+      "weekday": "Sat",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 487.0,
+      "gas_bucket": 23.0,
+      "fillups": 0,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-12",
+      "weekday": "Sun",
+      "earn": 120.0,
+      "bill_due": 55.0,
+      "balance": 509.0,
+      "gas_bucket": 16.0,
+      "fillups": 1,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-13",
+      "weekday": "Mon",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 586.0,
+      "gas_bucket": 9.0,
+      "fillups": 1,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-14",
+      "weekday": "Tue",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 663.0,
+      "gas_bucket": 2.0,
+      "fillups": 1,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-15",
+      "weekday": "Wed",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 765.0,
+      "gas_bucket": 20.0,
+      "fillups": 0,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-16",
+      "weekday": "Thu",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 842.0,
+      "gas_bucket": 13.0,
+      "fillups": 1,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-17",
+      "weekday": "Fri",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 919.0,
+      "gas_bucket": 6.0,
+      "fillups": 1,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-18",
+      "weekday": "Sat",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 1021.0,
+      "gas_bucket": 24.0,
+      "fillups": 0,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-19",
+      "weekday": "Sun",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 1098.0,
+      "gas_bucket": 17.0,
+      "fillups": 1,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-20",
+      "weekday": "Mon",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 1175.0,
+      "gas_bucket": 10.0,
+      "fillups": 1,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-21",
+      "weekday": "Tue",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 1252.0,
+      "gas_bucket": 3.0,
+      "fillups": 1,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-22",
+      "weekday": "Wed",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 1354.0,
+      "gas_bucket": 21.0,
+      "fillups": 0,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-23",
+      "weekday": "Thu",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 1431.0,
+      "gas_bucket": 14.0,
+      "fillups": 1,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-24",
+      "weekday": "Fri",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 1508.0,
+      "gas_bucket": 7.0,
+      "fillups": 1,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-25",
+      "weekday": "Sat",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 1585.0,
+      "gas_bucket": 0.0,
+      "fillups": 1,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-26",
+      "weekday": "Sun",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 1687.0,
+      "gas_bucket": 18.0,
+      "fillups": 0,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-27",
+      "weekday": "Mon",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 1764.0,
+      "gas_bucket": 11.0,
+      "fillups": 1,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-28",
+      "weekday": "Tue",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 1841.0,
+      "gas_bucket": 4.0,
+      "fillups": 1,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-29",
+      "weekday": "Wed",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 1943.0,
+      "gas_bucket": 22.0,
+      "fillups": 0,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-30",
+      "weekday": "Thu",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 2020.0,
+      "gas_bucket": 15.0,
+      "fillups": 1,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    },
+    {
+      "date": "2025-01-31",
+      "weekday": "Fri",
+      "earn": 120.0,
+      "bill_due": 0.0,
+      "balance": 2097.0,
+      "gas_bucket": 8.0,
+      "fillups": 1,
+      "cc_events": [],
+      "cc_interest_posted": [],
+      "cc_min_paid": [],
+      "cc_extra_on_due": [],
+      "oneoff_contribs": [],
+      "oneoff_paid": [],
+      "total_cc_balance": 0,
+      "total_iou_balance": 0,
+      "accrued_interest_unposted": 0
+    }
+  ]
+}
+</file>
 
 <file path=".hypothesis/constants/05003b5d7106c082">
 # file: /Users/wholesway/Dev/01-personal/CashSim/src/cashsim/models.py
@@ -514,6 +1708,10 @@ client_x509_cert_url = "https://www.googleapis.com/robot/v1/metadata/x509/svc-ac
 }
 </file>
 
+<file path="src/cashsim/analytics/__init__.py">
+
+</file>
+
 <file path="src/cashsim/io/__init__.py">
 from __future__ import annotations
 </file>
@@ -543,6 +1741,14 @@ def save_config(dials: Dials, path: str | Path) -> None:
     p.write_text(dials.model_dump_json(indent=2), encoding="utf-8")
 </file>
 
+<file path="src/cashsim/planning/__init__.py">
+
+</file>
+
+<file path="src/cashsim/sim/__init__.py">
+
+</file>
+
 <file path="src/cashsim/sim/roll.py">
 from __future__ import annotations
 
@@ -567,6 +1773,14 @@ def sum_non_debt_bills_due_today(day: date, bills: list[Bill]) -> float:
         if next_due_date(day, b.usual_day) == day:
             total += b.amount
     return round(total, 2)
+</file>
+
+<file path="src/cashsim/ui/__init__.py">
+
+</file>
+
+<file path="src/cashsim/utils/__init__.py">
+
 </file>
 
 <file path="src/cashsim/utils/date_utils.py">
@@ -624,6 +1838,10 @@ def last_statement_close_date(today: date, due_day: int, statement_day: int | No
 
 <file path=".monkey-mods.txt">
 cashsim.utils.money
+</file>
+
+<file path="example.json">
+
 </file>
 
 <file path="patch.diff">
@@ -1022,22 +2240,87 @@ if __name__ == "__main__":
 </file>
 
 <file path="src/cashsim/_typing_shims.py">
+"""Typing shims.
+
+These helpers provide stable type signatures for optional dependencies.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, TypeVar, cast
-
-import streamlit as st
-
-F = TypeVar("F", bound=Callable[..., Any])
+from typing import Any, overload
 
 
-Decorator = Callable[[F], F]
-Factory = Callable[..., Decorator]
+def _identity_decorator[**P, R](func: Callable[P, R]) -> Callable[P, R]:
+    return func
 
 
-cache_data = cast(Factory, st.cache_data)
-cache_resource = cast(Factory, st.cache_resource)
+def _decorator_factory[**P, R](
+    *_args: Any,
+    **_kwargs: Any,
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
+        return func
+
+    return decorator
+
+
+@overload
+def cache_data[**P, R](func: Callable[P, R]) -> Callable[P, R]: ...
+
+
+@overload
+def cache_data[**P, R](
+    *,
+    ttl: float | None = None,
+    **kwargs: Any,
+) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
+
+
+def cache_data[**P, R](func: Callable[P, R] | None = None, **kwargs: Any) -> Any:
+    """
+    Streamlit cache_data shim.
+
+    If streamlit is available, returns streamlit.cache_data. Otherwise,
+    returns a no-op decorator.
+    """
+    try:
+        import streamlit as st
+
+        return st.cache_data(func=func, **kwargs)
+    except Exception:
+        if func is not None:
+            return _identity_decorator(func)
+        return _decorator_factory(**kwargs)
+
+
+@overload
+def cache_resource[**P, R](func: Callable[P, R]) -> Callable[P, R]: ...
+
+
+@overload
+def cache_resource[**P, R](
+    *,
+    ttl: float | None = None,
+    **kwargs: Any,
+) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
+
+
+def cache_resource[**P, R](func: Callable[P, R] | None = None, **kwargs: Any) -> Any:
+    """
+    Streamlit cache_resource shim.
+
+    If streamlit is available, returns streamlit.cache_resource. Otherwise,
+    returns a no-op decorator.
+    """
+    try:
+        import streamlit as st
+
+        return st.cache_resource(func=func, **kwargs)
+    except Exception:
+        if func is not None:
+            return _identity_decorator(func)
+        return _decorator_factory(**kwargs)
 </file>
 
 <file path="src/cashsim/constants.py">
@@ -2615,80 +3898,206 @@ def post_daily_interest(balance: Decimal, apr: Decimal) -> Decimal:
 </file>
 
 <file path="src/cashsim/cli.py">
+"""Command-line interface for CashSim."""
+
 from __future__ import annotations
 
-import importlib
+import shutil
+import subprocess
 import sys
+from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
+from typing import Any
 
 import typer
 
 app = typer.Typer(
     add_completion=False,
     no_args_is_help=False,
-    help="CashSim CLI. Use `cashsim ui` to launch the Streamlit app.",
+    help="CashSim: a cashflow simulation toolkit.",
+)
+
+# --------------------------------------------------------------------------------------
+# Typer parameter metadata (module-level singletons)
+# --------------------------------------------------------------------------------------
+
+UI_ARGS: Any = typer.Argument(
+    None,
+    help="Extra args forwarded to `streamlit run ...` (example: --server.port 8502).",
+)
+
+RUN_CONFIG: Any = typer.Option(
+    ...,
+    "--config",
+    "-c",
+    exists=True,
+    dir_okay=False,
+    file_okay=True,
+    readable=True,
+    help="Path to your CashSim config JSON.",
+)
+
+RUN_OUT_DIR: Any = typer.Option(
+    Path("runs"),
+    "--out-dir",
+    "-o",
+    dir_okay=True,
+    file_okay=False,
+    help="Directory to write outputs.",
+)
+
+RUN_START: Any = typer.Option(
+    None,
+    "--start",
+    help="Start date (YYYY-MM-DD). Defaults to today in the sim.",
+)
+
+RUN_DAYS: Any = typer.Option(
+    31,
+    "--days",
+    "-d",
+    help="Number of days to simulate.",
+)
+
+RUN_FAST: Any = typer.Option(
+    False,
+    "--fast/--no-fast",
+    help="Skip expensive outputs and run minimal simulation.",
+)
+
+COMPARE_A: Any = typer.Option(
+    ...,
+    "--a",
+    exists=True,
+    help="First CSV (or series file) to compare.",
+)
+
+COMPARE_B: Any = typer.Option(
+    ...,
+    "--b",
+    exists=True,
+    help="Second CSV (or series file) to compare.",
+)
+
+COMPARE_OUT: Any = typer.Option(
+    Path("diff.csv"),
+    "--out",
+    "-o",
+    help="Where to write the diff CSV.",
+)
+
+COMPARE_ON: Any = typer.Option(
+    "date",
+    "--on",
+    help='Join key column (default: "date").',
+)
+
+COMPARE_COLUMNS: Any = typer.Option(
+    ["balance"],
+    "--col",
+    help="Columns to diff (repeatable: --col balance --col reserve).",
 )
 
 
-def _streamlit_app_file() -> str:
-    """Return the installed module file path for the Streamlit app."""
-    mod = importlib.import_module("cashsim.ui.streamlit_app")
-    if not getattr(mod, "__file__", None):
-        raise RuntimeError("cashsim.ui.streamlit_app has no __file__; install may be broken")
-    return str(Path(mod.__file__).resolve())
+@dataclass(frozen=True)
+class Cmd:
+    exe: str
+    args: list[str]
 
 
-def _run_streamlit(app_file: str, *, headless: bool, extra_args: list[str]) -> None:
-    """Invoke Streamlit programmatically so `cashsim ui` behaves like a real product entrypoint."""
-    from streamlit.web import cli as stcli
-
-    argv = ["streamlit", "run", app_file]
-    if headless:
-        argv.append("--server.headless=true")
-
-    # Allow advanced users to pass Streamlit flags, e.g. `cashsim ui -- --server.port 8502`
-    argv.extend(extra_args)
-
-    old_argv = sys.argv
-    try:
-        sys.argv = argv
-        stcli.main()
-    finally:
-        sys.argv = old_argv
+def _ensure(cmd: str) -> None:
+    if shutil.which(cmd) is None:
+        raise typer.BadParameter(f"Required executable not found: {cmd}")
 
 
-@app.command(
-    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
-)
+@app.command()
 def ui(
     ctx: typer.Context,
-    headless: bool = typer.Option(
-        False,
-        "--headless/--no-headless",
-        help="Run Streamlit without opening a browser.",
-    ),
+    args: list[str] = UI_ARGS,
 ) -> None:
-    """Launch the Streamlit UI."""
-    app_file = _streamlit_app_file()
-    extra_args = list(ctx.args)
-    _run_streamlit(app_file, headless=headless, extra_args=extra_args)
+    """
+    Launch the Streamlit UI (`streamlit run src/cashsim/ui_app.py`).
+
+    Any extra args after `ui` are forwarded to Streamlit.
+    """
+    _ensure("streamlit")
+    cmd = Cmd(
+        exe="streamlit",
+        args=["run", str(Path(__file__).with_name("ui_app.py")), *args],
+    )
+    raise typer.Exit(subprocess.call([cmd.exe, *cmd.args]))
+
+
+def _as_path(p: str | Path) -> Path:
+    return p if isinstance(p, Path) else Path(p)
+
+
+@app.command()
+def run(
+    config: Path = RUN_CONFIG,
+    out_dir: Path = RUN_OUT_DIR,
+    start: date | None = RUN_START,
+    days: int = RUN_DAYS,
+    fast: bool = RUN_FAST,
+) -> None:
+    """
+    Run a cash simulation from a config JSON and write outputs to a directory.
+
+    Example:
+      cashsim run -c configs/demo.json -o runs/demo --days 31
+    """
+    from cashsim.engine import run_simulation  # local import keeps CLI import fast
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    run_simulation(
+        config_path=config,
+        out_dir=out_dir,
+        start=start,
+        days=days,
+        fast=fast,
+    )
+    typer.echo(f"Wrote outputs to: {out_dir.resolve()}")
+
+
+@app.command()
+def compare(
+    a: Path = COMPARE_A,
+    b: Path = COMPARE_B,
+    out: Path = COMPARE_OUT,
+    on: str = COMPARE_ON,
+    columns: list[str] = COMPARE_COLUMNS,
+) -> None:
+    """
+    Compare two run outputs (CSVs) and write a diff CSV.
+
+    Example:
+      cashsim compare --a runs/a/balance.csv --b runs/b/balance.csv -o diff.csv
+    """
+    import pandas as pd
+
+    df_a: Any = pd.read_csv(a)
+    df_b: Any = pd.read_csv(b)
+
+    merged: Any = df_a.merge(df_b, on=on, how="outer", suffixes=("_a", "_b"))
+    for col in columns:
+        merged[f"{col}_diff"] = merged[f"{col}_b"] - merged[f"{col}_a"]
+
+    out.parent.mkdir(parents=True, exist_ok=True)
+    merged.to_csv(out, index=False)
+    typer.echo(f"Wrote diff to: {out.resolve()}")
 
 
 def main() -> None:
-    # Compatibility: `cashsim` launches the UI.
-    # Canonical: `cashsim ui`.
-    if len(sys.argv) == 1:
-        sys.argv = [sys.argv[0], "ui"]
-
-    app()
+    app(prog_name="cashsim")
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
 </file>
 
 <file path=".github/workflows/ci.yml">
-name: CI you can trust
+name: CI
 
 on:
   push:
@@ -2701,10 +4110,11 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.12"]
 
     steps:
       - name: Checkout
@@ -2722,23 +4132,8 @@ jobs:
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
 
-      # Install core tooling on all versions; include hypothesis so mypy can import tests on 3.10/3.11
-      - name: Install tooling (no project install on 3.10/3.11)
-        run: |
-          pip install ruff mypy pyright pytest hypothesis
-          pip install pandas-stubs types-python-dateutil typing-extensions
-
-      - name: Expose src/ on PYTHONPATH
-        run: echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
-
-      # Only install the project on the supported version
-      - name: Install project (editable) on 3.12 only
-        if: matrix.python-version == '3.12'
+      - name: Install project (editable)
         run: pip install -e ".[dev]"
-
-      - name: Install runtime deps for tests (3.12 only)
-        if: matrix.python-version == '3.12'
-        run: pip install pandas
 
       - name: Ruff (lint)
         run: ruff check .
@@ -2749,9 +4144,7 @@ jobs:
       - name: Mypy (type check)
         run: mypy .
 
-      # Run tests only where the package can actually be installed
-      - name: Pytest (3.12 only)
-        if: matrix.python-version == '3.12'
+      - name: Pytest
         run: pytest -q
 </file>
 
@@ -2776,11 +4169,13 @@ dependencies = [
   # UI
   "streamlit>=1.49,<2.0",
   # Streamlit dataframes use Arrow underneath; keep it modern for 3.13 wheels
-  "pyarrow>=21,<22",
+  "pyarrow>=22,<23",
   # NEW: Google Sheets integration
   "gspread>=6,<7",
   "google-auth>=2.0",
-  "gspread-dataframe>=2.0.0"
+  "gspread-dataframe>=2.0.0",
+  "typer>=0.12,<1.0",
+
 ]
 
 [project.optional-dependencies]

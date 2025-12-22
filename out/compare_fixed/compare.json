@@ -1,0 +1,44 @@
+{
+  "a": {
+    "accrued_interest_estimate": 0,
+    "cushion_breach_date": "2025-01-01",
+    "first_negative_date": "2025-01-01",
+    "friend_ask_latest_date": "2025-01-01",
+    "friend_ask_needed": 298.0,
+    "min_balance": -298.0,
+    "min_balance_date": "2025-01-01",
+    "total_upcoming_bills": 1015.0
+  },
+  "b": {
+    "accrued_interest_estimate": 16.07,
+    "cushion_breach_date": "2025-01-01",
+    "first_negative_date": "2025-01-01",
+    "friend_ask_latest_date": "2025-01-01",
+    "friend_ask_needed": 704.0,
+    "min_balance": -704.0,
+    "min_balance_date": "2025-01-01",
+    "total_upcoming_bills": 1106.0
+  },
+  "delta": {
+    "accrued_interest_estimate": 16.07,
+    "cushion_breach_date": {
+      "a": "2025-01-01",
+      "b": "2025-01-01"
+    },
+    "first_negative_date": {
+      "a": "2025-01-01",
+      "b": "2025-01-01"
+    },
+    "friend_ask_latest_date": {
+      "a": "2025-01-01",
+      "b": "2025-01-01"
+    },
+    "friend_ask_needed": 406.0,
+    "min_balance": -406.0,
+    "min_balance_date": {
+      "a": "2025-01-01",
+      "b": "2025-01-01"
+    },
+    "total_upcoming_bills": 91.0
+  }
+}

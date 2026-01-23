@@ -54,7 +54,7 @@ def metrics_delta(a: SimMetrics, b: SimMetrics) -> dict[str, Any]:
     for k in da:
         va = da[k]
         vb = db[k]
-        if isinstance(va, (int, float)) and isinstance(vb, (int, float)):
+        if isinstance(va, int | float) and isinstance(vb, int | float):
             out["delta"][k] = round(vb - va, 2)
         else:
             out["delta"][k] = {
@@ -135,7 +135,7 @@ def _sum_event_amounts(cell: Iterable[object] | None) -> float:
                 total += float(ev["amt"])
             elif "amount" in ev:
                 total += float(ev["amount"])
-        elif isinstance(ev, (list, tuple)) and len(ev) >= 2:
+        elif isinstance(ev, list | tuple) and len(ev) >= 2:
             try:
                 total += float(ev[1])
             except (TypeError, ValueError):

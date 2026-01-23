@@ -39,7 +39,7 @@ EVENT_COLUMNS: list[str] = [
 
 
 def _json_default(obj: object) -> str:
-    if isinstance(obj, (date, datetime)):
+    if isinstance(obj, date | datetime):
         return obj.isoformat()
     return str(obj)
 

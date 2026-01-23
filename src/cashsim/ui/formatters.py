@@ -10,7 +10,7 @@ def stringify_events_columns(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
 
     def _fmt_pair_list(v: object) -> str:
-        if isinstance(v, (list, tuple)) and len(v) > 0:
+        if isinstance(v, list | tuple) and len(v) > 0:
             try:
                 pairs = cast(Iterable[tuple[str, float]], v)
                 return "; ".join(f"{name}: ${float(amt):,.2f}" for (name, amt) in pairs)

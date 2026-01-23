@@ -76,7 +76,7 @@ def _coerce_date(v: object) -> date:
         return v
     if v is None or (isinstance(v, float) and pd.isna(v)):
         raise ValueError("one-off due_date is required")
-    if isinstance(v, (str, float, int)):
+    if isinstance(v, str | float | int):
         return pd.to_datetime(str(v)).date()
     raise ValueError(f"Cannot convert {type(v)} to date")
 
@@ -85,12 +85,12 @@ def _none_if_nan(v: object) -> int | None:
     if v is None:
         return None
     try:
-        if isinstance(v, (float, int)) and pd.isna(v):
+        if isinstance(v, float | int) and pd.isna(v):
             return None
     except Exception:
         pass
     try:
-        if isinstance(v, (int, float, str)):
+        if isinstance(v, int | float | str):
             return int(float(v))
         return None
     except Exception:

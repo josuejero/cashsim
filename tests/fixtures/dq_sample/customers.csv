@@ -1,0 +1,6 @@
+customer_id,email,signup_date,status
+C-1,alice@example.com,2024-01-01,active
+C-2,bob@example.com,2023-06-15,active
+C-3,,2024-03-20,inactive
+C-3,,2024-03-20,inactive
+C-UNK,unknown@example.com,2023-04-01,unknown

@@ -46,6 +46,6 @@ def test_risk_schema_contract() -> None:
     if r.status_code == 200:
         body = r.json()
         assert set(body.keys()) == {"probability", "horizon_days", "drivers"}
-        assert isinstance(body["probability"], (float, int))
+        assert isinstance(body["probability"], float | int)
         assert body["horizon_days"] == 30
         assert isinstance(body["drivers"], list)

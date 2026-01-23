@@ -1,0 +1,156 @@
+{
+  "dataset_name": "dq_sample",
+  "dataset_root": "dq_sample",
+  "dataset_owner": "data-team@cashsim",
+  "issue_owner": "data-ops@cashsim",
+  "data_dictionary_link": "docs/data_dictionary.md",
+  "thresholds": {
+    "missing": {
+      "warn": 0.01,
+      "fail": 0.05,
+      "comparison": "gt"
+    },
+    "duplicate": {
+      "warn": 0.001,
+      "fail": 0.01,
+      "comparison": "gt"
+    },
+    "invalid": {
+      "warn": 0.005,
+      "fail": 0.02,
+      "comparison": "gt"
+    },
+    "coverage": {
+      "warn": 0.98,
+      "fail": 0.95,
+      "comparison": "lt"
+    }
+  },
+  "tables": [
+    {
+      "name": "customers",
+      "file": "customers.csv",
+      "owner": "analytics@cashsim",
+      "filter_column": "signup_date",
+      "keys": [
+        {
+          "name": "customers.pk",
+          "columns": [
+            "customer_id"
+          ],
+          "kind": "primary"
+        },
+        {
+          "name": "customers.email.nk",
+          "columns": [
+            "email"
+          ],
+          "kind": "natural"
+        }
+      ],
+      "critical_columns": [
+        "customer_id",
+        "email"
+      ],
+      "missingness": [
+        {
+          "column": "email",
+          "thresholds": {
+            "warn": 0.02,
+            "fail": 0.25,
+            "comparison": "gt"
+          }
+        }
+      ],
+      "allowed_values": [
+        {
+          "column": "status",
+          "values": [
+            "active",
+            "inactive"
+          ],
+          "case_sensitive": false
+        }
+      ],
+      "date_rules": [
+        {
+          "column": "signup_date",
+          "allow_future": false
+        }
+      ]
+    },
+    {
+      "name": "orders",
+      "file": "orders.csv",
+      "owner": "ops@cashsim",
+      "filter_column": "order_date",
+      "keys": [
+        {
+          "name": "orders.pk",
+          "columns": [
+            "order_id"
+          ],
+          "kind": "primary"
+        },
+        {
+          "name": "orders.customer_day",
+          "columns": [
+            "customer_id",
+            "order_date"
+          ],
+          "kind": "natural"
+        }
+      ],
+      "critical_columns": [
+        "order_id",
+        "customer_id",
+        "order_date"
+      ],
+      "range_rules": [
+        {
+          "column": "amount",
+          "min_value": 0.0
+        }
+      ],
+      "allowed_values": [
+        {
+          "column": "status",
+          "values": [
+            "completed",
+            "processing",
+            "shipped"
+          ],
+          "case_sensitive": false
+        }
+      ],
+      "date_rules": [
+        {
+          "column": "order_date",
+          "allow_future": false
+        }
+      ]
+    }
+  ],
+  "foreign_keys": [
+    {
+      "name": "orders.customer_fk",
+      "child_table": "orders",
+      "parent_table": "customers",
+      "child_columns": [
+        "customer_id"
+      ],
+      "parent_columns": [
+        "customer_id"
+      ],
+      "allow_unknown": true,
+      "unknown_values": [
+        "C-UNK"
+      ],
+      "thresholds": {
+        "warn": 0.99,
+        "fail": 0.96,
+        "comparison": "lt"
+      }
+    }
+  ]
+}

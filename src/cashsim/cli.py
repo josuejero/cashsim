@@ -15,6 +15,7 @@ from cashsim.compare import (
     render_compare_markdown,
     series_diff,
 )
+from cashsim.dq.cli import dq_app
 from cashsim.io.config_io import load_config
 from cashsim.io.csv_import import import_input_tables
 from cashsim.io.csv_tables import export_input_tables
@@ -26,6 +27,7 @@ APP_HELP = (
 )
 
 app = typer.Typer(add_completion=False, no_args_is_help=False, help=APP_HELP)
+app.add_typer(dq_app, name="dq")
 
 HEADLESS_OPTION = typer.Option(
     False,
